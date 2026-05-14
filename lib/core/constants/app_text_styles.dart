@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
+  static TextStyle headlineDark = const TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+    color: AppColors.primaryDark,
+  );
+
   static TextStyle headline1 = const TextStyle(
     fontFamily: 'Inter',
     fontSize: 24,

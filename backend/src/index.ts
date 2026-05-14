@@ -1,25 +1,65 @@
 import express from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 import { register, login } from './controllers/auth.controller';
-import { getProfile } from './controllers/user.controller';
-import { transact } from './controllers/services.controller';
+import { getProfile, updateProfile, submitKyc } from './controllers/user.controller';
+import {
+  transact,
+  buyAirtime,
+  buyData,
+  payElectricity,
+  payCableTV,
+  getDataPlans,
+  getCablePlans,
+  verifySmartCard,
+  verifyMeter,
+} from './controllers/services.controller';
+import { getNotifications, markNotificationRead } from './controllers/notification.controller';
+import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
 import { authenticate } from './middleware/auth.middleware';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Auth Routes
+// ─── Auth Routes ─────────────────────────────────────────────────────────────
 app.post('/api/auth/register', register);
 app.post('/api/auth/login', login);
 
-// User Routes
+// ─── User Routes ─────────────────────────────────────────────────────────────
 app.get('/api/user/profile', authenticate, getProfile);
+app.put('/api/user/profile', authenticate, updateProfile);
+app.post('/api/user/kyc', authenticate, submitKyc);
 
-// Service Routes
+// ─── Service Routes (Real VTPass) ────────────────────────────────────────────
+app.post('/api/services/airtime', authenticate, buyAirtime);
+app.post('/api/services/data', authenticate, buyData);
+app.post('/api/services/electricity', authenticate, payElectricity);
+app.post('/api/services/cable', authenticate, payCableTV);
+
+// Variation / plan fetching (GET)
+app.get('/api/services/data-plans/:network', authenticate, getDataPlans);
+app.get('/api/services/cable-plans/:provider', authenticate, getCablePlans);
+
+// Smart card / Meter verification
+app.post('/api/services/verify-smartcard', authenticate, verifySmartCard);
+app.post('/api/services/verify-meter', authenticate, verifyMeter);
+
+// ─── Wallet / DVA Routes ─────────────────────────────────────────────────────
+app.get('/api/wallet/virtual-account', authenticate, getVirtualAccount);
+app.post('/api/wallet/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+
+// ─── Legacy: FUND / CONVERT_AIRTIME ─────────────────────────────────────────
 app.post('/api/services/transact', authenticate, transact);
+
+// ─── Notification Routes ─────────────────────────────────────────────────────
+app.get('/api/notifications', authenticate, getNotifications);
+app.put('/api/notifications/:id/read', authenticate, markNotificationRead);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);
 });

@@ -16,12 +16,19 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
   void _register() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_firstNameController.text.isEmpty ||
+        _lastNameController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _emailController.text.isEmpty || 
+        _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all fields')),
       );
@@ -30,10 +37,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
+    final fullName = '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}';
+
     try {
       final response = await ApiService.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
+        fullName,
+        _phoneController.text.trim(),
       );
       
       // Save Token
@@ -67,6 +78,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -97,6 +111,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: AppTextStyles.headline1.copyWith(fontSize: 28),
               ),
               const SizedBox(height: 40),
+              CustomTextField(
+                controller: _firstNameController,
+                label: 'First Name',
+                hint: 'John',
+                keyboardType: TextInputType.name,
+              ),
+              const SizedBox(height: 24),
+              CustomTextField(
+                controller: _lastNameController,
+                label: 'Last Name',
+                hint: 'Doe',
+                keyboardType: TextInputType.name,
+              ),
+              const SizedBox(height: 24),
+              CustomTextField(
+                controller: _phoneController,
+                label: 'Phone Number',
+                hint: '08012345678',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 24),
               CustomTextField(
                 controller: _emailController,
                 label: 'Email',

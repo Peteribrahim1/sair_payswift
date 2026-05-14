@@ -11,13 +11,23 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  password     String
-  balance      Float         @default(0.0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
+  id                   String         @id @default(uuid())
+  email                String         @unique
+  password             String
+  fullName             String?
+  phone                String?
+  balance              Float          @default(0.0)
+  paystackCustomerCode String?        // Paystack customer ID
+  virtualAccountNumber String?        // e.g. "9876543210"
+  virtualAccountBank   String?        // e.g. "Titan-Paystack Bank"
+  virtualAccountName   String?        // e.g. "Peter Ibrahim"
+  bvn                  String?
+  nin                  String?
+  kycVerified          Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  transactions         Transaction[]
+  notifications        Notification[]
 }
 
 model Transaction {
@@ -27,5 +37,18 @@ model Transaction {
   type      String
   amount    Float
   status    String   @default("COMPLETED")
+  phone     String?
+  network   String?
+  reference String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
 }

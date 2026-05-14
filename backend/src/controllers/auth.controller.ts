@@ -6,7 +6,7 @@ import { prisma } from '../prisma';
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, fullName, phone } = req.body;
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) return res.status(400).json({ error: 'User already exists.' });
@@ -16,12 +16,14 @@ export const register = async (req: Request, res: Response) => {
       data: {
         email,
         password: hashedPassword,
-        balance: 5000.0, // Initial balance
+        fullName,
+        phone,
+        balance: 0.0, // Initial balance
       },
     });
 
     const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-    res.status(201).json({ token, user: { id: user.id, email: user.email, balance: user.balance } });
+    res.status(201).json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, balance: user.balance } });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error.' });
   }

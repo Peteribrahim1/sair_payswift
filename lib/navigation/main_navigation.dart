@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/history/transaction_history_screen.dart';
+import '../screens/services/convert_airtime_screen.dart';
 import '../screens/news/news_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../core/constants/app_colors.dart';
@@ -16,8 +18,8 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = [
     const HomeScreen(),
-    const Scaffold(body: Center(child: Text('Transfer History'))), // Placeholder
-    const Scaffold(body: Center(child: Text('Convert'))), // Placeholder
+    const TransactionHistoryScreen(),
+    const ConvertAirtimeScreen(),
     const NewsScreen(),
     const ProfileScreen(),
   ];
@@ -57,8 +59,9 @@ class _MainNavigationState extends State<MainNavigation> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.swap_horiz),
-              label: 'Transfer',
+              icon: Icon(Icons.history_outlined),
+              activeIcon: Icon(Icons.history),
+              label: 'History',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.autorenew),

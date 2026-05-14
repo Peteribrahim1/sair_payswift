@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../auth/login_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -14,12 +16,22 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    });
+    _navigateToNext();
+  }
+
+  Future<void> _navigateToNext() async {
+    await Future.delayed(const Duration(seconds: 3));
+    final prefs = await SharedPreferences.getInstance();
+    final seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => seenOnboarding ? const LoginScreen() : const OnboardingScreen(),
+      ),
+    );
   }
 
   @override
@@ -30,8 +42,8 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: isDark 
-                ? [const Color(0xFF101216), const Color(0xFF181B22)] 
+            colors: isDark
+                ? [const Color(0xFF101216), const Color(0xFF181B22)]
                 : [AppColors.primaryDark, AppColors.secondaryDark],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -54,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'PaySwift',
+              'SairPay',
               style: AppTextStyles.headlineLight.copyWith(fontSize: 32),
             ),
             const SizedBox(height: 8),
