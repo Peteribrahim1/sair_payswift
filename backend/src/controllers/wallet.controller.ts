@@ -38,7 +38,7 @@ export const getVirtualAccount = async (req: AuthRequest, res: Response) => {
       const nameParts = (user.fullName || user.email).split(' ');
       const firstName = nameParts[0] ?? 'User';
       const lastName  = nameParts.slice(1).join(' ') || firstName;
-      const customer  = await createCustomer(user.email, firstName, lastName);
+      const customer  = await createCustomer(user.email, firstName, lastName, user.phone || undefined);
       customerCode    = customer.customerCode;
     }
 

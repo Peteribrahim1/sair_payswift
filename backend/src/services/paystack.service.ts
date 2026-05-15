@@ -16,11 +16,17 @@ const HEADERS = {
 export async function createCustomer(
   email: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  phone?: string
 ): Promise<{ customerCode: string }> {
   const { data } = await axios.post(
     `${BASE_URL}/customer`,
-    { email, first_name: firstName, last_name: lastName },
+    { 
+      email, 
+      first_name: firstName, 
+      last_name: lastName,
+      phone: phone
+    },
     { headers: HEADERS }
   );
   if (!data.status) throw new Error(data.message || 'Failed to create Paystack customer');
