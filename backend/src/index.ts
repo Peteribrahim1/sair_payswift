@@ -20,6 +20,7 @@ import {
 import { getNotifications, markNotificationRead } from './controllers/notification.controller';
 import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
 import { authenticate } from './middleware/auth.middleware';
+import { prisma } from './prisma';
 
 const app = express();
 app.use(cors());
