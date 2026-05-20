@@ -96,18 +96,46 @@ class ApiService {
 
   static Future<Map<String, dynamic>> withdrawFunds({
     required double amount,
-    required String bankName,
-    required String accountNumber,
+    required String bankAccountId,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/transactions/withdraw'),
       headers: _headers,
       body: jsonEncode({
         'amount': amount,
+        'bankAccountId': bankAccountId,
+      }),
+    );
+    return _handleResponse(response);
+  }
+
+  // ─── Bank Accounts ────────────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getBankAccounts() async {
+    final response = await http.get(Uri.parse('$baseUrl/user/bank-accounts'), headers: _headers);
+    final data = _handleResponse(response);
+    return data['bankAccounts'] ?? [];
+  }
+
+  static Future<Map<String, dynamic>> addBankAccount({
+    required String bankName,
+    required String bankCode,
+    required String accountNumber,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/user/bank-accounts'),
+      headers: _headers,
+      body: jsonEncode({
         'bankName': bankName,
+        'bankCode': bankCode,
         'accountNumber': accountNumber,
       }),
     );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> deleteBankAccount(String id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/user/bank-accounts/$id'), headers: _headers);
     return _handleResponse(response);
   }
 

@@ -63,6 +63,12 @@ app.put('/api/notifications/:id/read', authenticate, markNotificationRead);
 import { withdrawFunds } from './controllers/transactions.controller';
 app.post('/api/transactions/withdraw', authenticate, withdrawFunds);
 
+// ─── Bank Accounts ───────────────────────────────────────────────────────────
+import { addBankAccount, getBankAccounts, deleteBankAccount } from './controllers/bank.controller';
+app.post('/api/user/bank-accounts', authenticate, addBankAccount);
+app.get('/api/user/bank-accounts', authenticate, getBankAccounts);
+app.delete('/api/user/bank-accounts/:id', authenticate, deleteBankAccount);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);

@@ -13,15 +13,23 @@ class BankAccountsScreen extends StatefulWidget {
 }
 
 class _BankAccountsScreenState extends State<BankAccountsScreen> {
-  void _addAccount(String bank, String number, String name) {
-    context.read<WalletProvider>().addBankAccount(bank, number, name);
-  }
-
   void _showAddAccountSheet() {
     final accountController = TextEditingController();
-    final nameController = TextEditingController();
-    String selectedBank = 'Access Bank';
-    final banks = ['Access Bank', 'GTBank', 'Zenith Bank', 'UBA', 'First Bank', 'Kuda Bank'];
+    
+    // Map of popular Nigerian banks to their Paystack bank codes
+    final banks = {
+      'Access Bank': '044',
+      'GTBank': '058',
+      'Zenith Bank': '057',
+      'UBA': '033',
+      'First Bank': '011',
+      'Kuda Bank': '50211',
+      'Opay': '999992',
+      'Palmpay': '999991',
+    };
+    
+    String selectedBankName = 'Access Bank';
+    String selectedBankCode = '044';
     bool isLoading = false;
 
     showModalBottomSheet(
@@ -60,10 +68,15 @@ class _BankAccountsScreenState extends State<BankAccountsScreen> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: selectedBank,
+                          value: selectedBankName,
                           isExpanded: true,
-                          items: banks.map((bank) => DropdownMenuItem(value: bank, child: Text(bank))).toList(),
-                          onChanged: (val) => setSheetState(() => selectedBank = val!),
+                          items: banks.keys.map((bank) => DropdownMenuItem(value: bank, child: Text(bank))).toList(),
+                          onChanged: (val) {
+                            setSheetState(() {
+                              selectedBankName = val!;
+                              selectedBankCode = banks[val]!;
+                            });
+                          },
                         ),
                       ),
                     ),
@@ -74,12 +87,8 @@ class _BankAccountsScreenState extends State<BankAccountsScreen> {
                       controller: accountController,
                       keyboardType: TextInputType.number,
                     ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      label: 'Account Name',
-                      hint: 'Verified name will appear here',
-                      controller: nameController,
-                    ),
+                    const SizedBox(height: 8),
+                    Text('We will securely verify this account before linking.', style: AppTextStyles.bodySecondary.copyWith(fontSize: 12)),
                     const SizedBox(height: 32),
                     SizedBox(
                       width: double.infinity,
@@ -92,14 +101,28 @@ class _BankAccountsScreenState extends State<BankAccountsScreen> {
                         onPressed: isLoading ? null : () async {
                           if (accountController.text.length < 10) return;
                           setSheetState(() => isLoading = true);
-                          await Future.delayed(const Duration(seconds: 1)); // Mock verification
-                          _addAccount(selectedBank, accountController.text, nameController.text.isEmpty ? 'John Doe' : nameController.text);
-                          if (!mounted) return;
-                          Navigator.pop(context);
+                          
+                          try {
+                            await context.read<WalletProvider>().addBankAccount(
+                              selectedBankName, 
+                              selectedBankCode, 
+                              accountController.text,
+                            );
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            AppSnackBar.showSuccess(context, 'Bank account linked successfully!');
+                          } catch (e) {
+                            if (!mounted) return;
+                            AppSnackBar.showError(context, e.toString().replaceAll('Exception: ', ''));
+                          } finally {
+                            if (mounted) {
+                              setSheetState(() => isLoading = false);
+                            }
+                          }
                         },
                         child: isLoading 
                           ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text('Link Account', style: AppTextStyles.button),
+                          : Text('Verify & Link Account', style: AppTextStyles.button),
                       ),
                     ),
                   ],
@@ -180,7 +203,7 @@ class _BankAccountsScreenState extends State<BankAccountsScreen> {
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                      onPressed: () => context.read<WalletProvider>().removeBankAccount(index),
+                      onPressed: () => context.read<WalletProvider>().removeBankAccount(acc['id']!),
                     ),
                   ),
                 );

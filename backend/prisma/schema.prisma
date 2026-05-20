@@ -28,6 +28,19 @@ model User {
   updatedAt            DateTime       @updatedAt
   transactions         Transaction[]
   notifications        Notification[]
+  bankAccounts         BankAccount[]
+}
+
+model BankAccount {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  bankName      String   
+  bankCode      String   
+  accountNumber String   
+  accountName   String   
+  recipientCode String   
+  createdAt     DateTime @default(now())
 }
 
 model Transaction {

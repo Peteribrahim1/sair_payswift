@@ -17,10 +17,7 @@ class WalletProvider extends ChangeNotifier {
   bool _requireKyc = false;
 
 
-  final List<Map<String, String>> _bankAccounts = [
-    {'bank': 'Access Bank', 'number': '0123****89', 'name': 'John Doe', 'logo': 'A'},
-    {'bank': 'GTBank', 'number': '0987****21', 'name': 'John Doe', 'logo': 'G'},
-  ];
+  List<Map<String, String>> _bankAccounts = [];
 
   double get balance => _balance;
   String get email => _email;
@@ -88,6 +85,7 @@ class WalletProvider extends ChangeNotifier {
       _fullName = data['fullName'] ?? '';
       _phone = data['phone'] ?? '';
       _transactions = data['transactions'] ?? [];
+      await fetchBankAccounts();
     } catch (e) {
       debugPrint('Error fetching profile: $e');
     } finally {
@@ -130,8 +128,7 @@ class WalletProvider extends ChangeNotifier {
     try {
       final data = await ApiService.withdrawFunds(
         amount: amount,
-        bankName: account['bank'] ?? 'Unknown Bank',
-        accountNumber: account['number'] ?? '',
+        bankAccountId: account['id'] ?? '',
       );
       if (data['success'] == true) {
         _balance = (data['balance'] as num).toDouble();
@@ -228,21 +225,57 @@ class WalletProvider extends ChangeNotifier {
   }
 
   // ─── Bank Accounts ────────────────────────────────────────────────────────
-  void addBankAccount(String bank, String number, String name) {
-    _bankAccounts.add({
-      'bank': bank,
-      'number': '${number.substring(0, 4)}****${number.substring(number.length - 2)}',
-      'name': name,
-      'logo': bank[0],
-    });
-    notifyListeners();
+  Future<void> fetchBankAccounts() async {
+    try {
+      final accounts = await ApiService.getBankAccounts();
+      _bankAccounts = accounts.map<Map<String, String>>((acc) => {
+        'id': acc['id'].toString(),
+        'bank': acc['bankName'].toString(),
+        'number': acc['number'].toString(),
+        'name': acc['accountName'].toString(),
+        'logo': acc['bankName'].toString()[0],
+      }).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching bank accounts: $e');
+    }
   }
 
-  void removeBankAccount(int index) {
-    if (index >= 0 && index < _bankAccounts.length) {
-      _bankAccounts.removeAt(index);
+  Future<bool> addBankAccount(String bankName, String bankCode, String accountNumber) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final data = await ApiService.addBankAccount(
+        bankName: bankName,
+        bankCode: bankCode,
+        accountNumber: accountNumber,
+      );
+      if (data['success'] == true) {
+        await fetchBankAccounts();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error adding bank account: $e');
+      throw e;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
+    return false;
+  }
+
+  Future<bool> removeBankAccount(String id) async {
+    try {
+      final data = await ApiService.deleteBankAccount(id);
+      if (data['success'] == true) {
+        _bankAccounts.removeWhere((acc) => acc['id'] == id);
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error removing bank account: $e');
+    }
+    return false;
   }
 
   void clearData() {

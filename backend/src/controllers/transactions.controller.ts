@@ -1,18 +1,20 @@
 import { Response } from 'express';
 import { prisma } from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { initiateTransfer } from '../services/paystack.service';
+import crypto from 'crypto';
 
 // ─── POST /api/transactions/withdraw ──────────────────────────────────────────
 export const withdrawFunds = async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
-  const { amount, bankName, accountNumber } = req.body;
+  const { amount, bankAccountId } = req.body;
 
   if (!amount || amount <= 0) {
     return res.status(400).json({ error: 'Valid amount is required' });
   }
 
-  if (!bankName || !accountNumber) {
-    return res.status(400).json({ error: 'Bank details are required' });
+  if (!bankAccountId) {
+    return res.status(400).json({ error: 'Bank account is required' });
   }
 
   try {
@@ -21,6 +23,22 @@ export const withdrawFunds = async (req: AuthRequest, res: Response) => {
 
     if (user.balance < amount) {
       return res.status(400).json({ error: 'Insufficient wallet balance' });
+    }
+
+    const bankAccount = await prisma.bankAccount.findFirst({
+      where: { id: bankAccountId, userId },
+    });
+
+    if (!bankAccount) {
+      return res.status(404).json({ error: 'Bank account not found' });
+    }
+
+    // Initiate Transfer via Paystack
+    const reference = crypto.randomBytes(16).toString('hex');
+    const transferResult = await initiateTransfer(amount, bankAccount.recipientCode, reference);
+
+    if (transferResult.status !== 'success' && transferResult.status !== 'pending') {
+      throw new Error(`Transfer failed: ${transferResult.status}`);
     }
 
     // Process atomically
@@ -35,13 +53,14 @@ export const withdrawFunds = async (req: AuthRequest, res: Response) => {
           type: 'WITHDRAWAL',
           amount,
           status: 'COMPLETED',
+          reference: transferResult.reference || reference,
         },
       }),
       prisma.notification.create({
         data: {
           userId,
-          title: 'Withdrawal Successful',
-          message: `You have successfully withdrawn ₦${amount.toFixed(2)} to ${bankName} (${accountNumber}).`,
+          title: 'Withdrawal Processed',
+          message: `Your withdrawal of ₦${amount.toFixed(2)} to ${bankAccount.bankName} is being processed.`,
         },
       }),
     ]);

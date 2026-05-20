@@ -134,3 +134,74 @@ export function verifyWebhookSignature(
     .digest('hex');
   return hash === signatureHeader;
 }
+
+// ─── Fetch Banks ──────────────────────────────────────────────────────────────
+export async function fetchBanks(): Promise<any[]> {
+  try {
+    const { data } = await axios.get(`${BASE_URL}/bank?country=nigeria`, { headers: HEADERS });
+    if (!data.status) throw new Error(data.message);
+    return data.data;
+  } catch (error: any) {
+    console.error('Fetch Banks failed:', error.response?.data?.message || error.message);
+    return [];
+  }
+}
+
+// ─── Verify Account Number ────────────────────────────────────────────────────
+export async function verifyAccountNumber(accountNumber: string, bankCode: string): Promise<string> {
+  try {
+    const { data } = await axios.get(
+      `${BASE_URL}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+      { headers: HEADERS }
+    );
+    if (!data.status) throw new Error(data.message);
+    return data.data.account_name;
+  } catch (error: any) {
+    console.error('Verify Account failed:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to verify account number');
+  }
+}
+
+// ─── Create Transfer Recipient ────────────────────────────────────────────────
+export async function createTransferRecipient(name: string, accountNumber: string, bankCode: string): Promise<string> {
+  try {
+    const { data } = await axios.post(
+      `${BASE_URL}/transferrecipient`,
+      {
+        type: 'nuban',
+        name,
+        account_number: accountNumber,
+        bank_code: bankCode,
+        currency: 'NGN',
+      },
+      { headers: HEADERS }
+    );
+    if (!data.status) throw new Error(data.message);
+    return data.data.recipient_code;
+  } catch (error: any) {
+    console.error('Create Recipient failed:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to create transfer recipient');
+  }
+}
+
+// ─── Initiate Transfer ────────────────────────────────────────────────────────
+export async function initiateTransfer(amountNaira: number, recipientCode: string, reference?: string): Promise<any> {
+  try {
+    const { data } = await axios.post(
+      `${BASE_URL}/transfer`,
+      {
+        source: 'balance',
+        amount: Math.round(amountNaira * 100), // Convert to kobo
+        recipient: recipientCode,
+        reason: 'Wallet Withdrawal',
+        reference,
+      },
+      { headers: HEADERS }
+    );
+    if (!data.status) throw new Error(data.message);
+    return data.data; // Includes status like 'pending', 'success', 'failed'
+  } catch (error: any) {
+    console.error('Initiate Transfer failed:', error.response?.data?.message || error.message);
+    throw new Error(error.response?.data?.message || 'Failed to initiate transfer');
+  }
+}
