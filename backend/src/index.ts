@@ -70,49 +70,8 @@ app.post('/api/user/bank-accounts', authenticate, addBankAccount);
 app.get('/api/user/bank-accounts', authenticate, getBankAccounts);
 app.delete('/api/user/bank-accounts/:id', authenticate, deleteBankAccount);
 
-// ─── TEMP: Admin Refund Last Simulated Withdrawal ────────────────────────────
-app.post('/api/admin/refund-last-withdrawal', async (req: any, res: any) => {
-  const secret = req.headers['x-admin-secret'];
-  if (secret !== 'sair-temp-refund-2026') {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  try {
-    const lastWithdrawal = await prisma.transaction.findFirst({
-      where: { type: 'WITHDRAWAL', status: 'COMPLETED' },
-      orderBy: { createdAt: 'desc' },
-      include: { user: true },
-    });
-    if (!lastWithdrawal) return res.status(404).json({ error: 'No completed withdrawal found' });
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: lastWithdrawal.userId },
-        data: { balance: { increment: lastWithdrawal.amount } },
-      }),
-      prisma.transaction.update({
-        where: { id: lastWithdrawal.id },
-        data: { status: 'REFUNDED' },
-      }),
-      prisma.notification.create({
-        data: {
-          userId: lastWithdrawal.userId,
-          title: 'Withdrawal Reversed',
-          message: `₦${lastWithdrawal.amount.toFixed(2)} has been refunded to your wallet.`,
-        },
-      }),
-    ]);
-    const updated = await prisma.user.findUnique({ where: { id: lastWithdrawal.userId } });
-    return res.json({
-      success: true,
-      refunded: lastWithdrawal.amount,
-      user: lastWithdrawal.user.email,
-      newBalance: updated?.balance,
-    });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
-  }
-});
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);
 });
+
