@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -132,13 +133,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Text('Account Number', style: AppTextStyles.bodySecondary),
                                 GestureDetector(
-                                  onTap: () {
-                                    Clipboard.setData(ClipboardData(text: wallet.virtualAccountNumber!));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Account number copied!')),
-                                    );
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () async {
+                                    await Clipboard.setData(ClipboardData(text: wallet.virtualAccountNumber!));
+                                    if (sheetContext.mounted) {
+                                      Navigator.pop(sheetContext);
+                                      AppSnackBar.showSuccess(context, 'Account number copied!');
+                                    }
                                   },
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(wallet.virtualAccountNumber!, style: AppTextStyles.headlineLight.copyWith(color: AppColors.primaryDark, fontSize: 20)),
                                       const SizedBox(width: 8),
@@ -417,9 +421,7 @@ class _KycFormWidgetState extends State<_KycFormWidget> {
     final bvn = _bvnController.text.trim();
     final nin = _ninController.text.trim();
     if (bvn.isEmpty && nin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter either BVN or NIN')),
-      );
+      AppSnackBar.showError(context, 'Please enter either BVN or NIN');
       return;
     }
     setState(() => _isSubmitting = true);
@@ -427,13 +429,9 @@ class _KycFormWidgetState extends State<_KycFormWidget> {
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('KYC Verified Successfully. Generating Account...')),
-        );
+        AppSnackBar.showSuccess(context, 'KYC Verified Successfully. Generating Account...');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to verify KYC. Please try again.')),
-        );
+        AppSnackBar.showError(context, 'Failed to verify KYC. Please try again.');
       }
     }
   }

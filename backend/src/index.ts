@@ -59,6 +59,10 @@ app.post('/api/services/transact', authenticate, transact);
 app.get('/api/notifications', authenticate, getNotifications);
 app.put('/api/notifications/:id/read', authenticate, markNotificationRead);
 
+// ─── Transactions Routes ─────────────────────────────────────────────────────
+import { withdrawFunds } from './controllers/transactions.controller';
+app.post('/api/transactions/withdraw', authenticate, withdrawFunds);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);

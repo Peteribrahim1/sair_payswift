@@ -125,6 +125,26 @@ class WalletProvider extends ChangeNotifier {
     return false;
   }
 
+  // ─── Withdraw ─────────────────────────────────────────────────────────────
+  Future<bool> processWithdrawal(double amount, Map<String, String> account) async {
+    try {
+      final data = await ApiService.withdrawFunds(
+        amount: amount,
+        bankName: account['bank'] ?? 'Unknown Bank',
+        accountNumber: account['number'] ?? '',
+      );
+      if (data['success'] == true) {
+        _balance = (data['balance'] as num).toDouble();
+        if (data['transaction'] != null) _transactions.insert(0, data['transaction']);
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Withdrawal error: $e');
+    }
+    return false;
+  }
+
   // ─── Airtime ──────────────────────────────────────────────────────────────
   Future<Map<String, dynamic>> buyAirtime({
     required String network,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -81,16 +82,7 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        const Icon(Icons.error_outline, color: Colors.white, size: 18),
-        const SizedBox(width: 8),
-        Expanded(child: Text(msg)),
-      ]),
-      backgroundColor: Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    AppSnackBar.showError(context, msg);
   }
 
   void _showSuccessDialog(double sent, double received) {

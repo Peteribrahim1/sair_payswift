@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -23,9 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      AppSnackBar.showError(context, 'Please fill all fields');
       return;
     }
 
@@ -53,9 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login Failed: $e')),
-        );
+        AppSnackBar.showError(context, 'Login Failed: $e');
       }
     } finally {
       if (mounted) {
@@ -74,67 +71,133 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-          onPressed: () {},
-        ),
-        title: Text('Login', style: AppTextStyles.subtitle),
-        centerTitle: true,
-      ),
+      backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false, // Extend gradient behind status bar
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              Text(
-                'Welcome Back!',
-                style: AppTextStyles.headline1.copyWith(fontSize: 28),
-              ),
-              const SizedBox(height: 40),
-              CustomTextField(
-                controller: _emailController,
-                label: 'Email',
-                hint: 'johndoe@email.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Password',
-                hint: 'Enter Password',
-                isPassword: true,
-              ),
-              const SizedBox(height: 40),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      text: 'Login',
-                      onPressed: _login,
+              // Beautiful Gradient Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 40),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryDark, AppColors.secondaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SafeArea(
+                      bottom: false,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.centerLeft,
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
                     ),
-              const SizedBox(height: 24),
-              Center(
-                child: TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Forgot Password?',
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                    const SizedBox(height: 10),
+                    Text(
+                      'Welcome Back!',
+                      style: AppTextStyles.headline1.copyWith(
+                        fontSize: 32,
+                        color: Colors.white,
+                      ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter your credentials to access your account.',
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Elevated Form Card
+              Transform.translate(
+                offset: const Offset(0, -20),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.cardShadow,
+                        blurRadius: 20,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        hint: 'johndoe@email.com',
+                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: Icons.email_outlined,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _passwordController,
+                        label: 'Password',
+                        hint: 'Enter Password',
+                        isPassword: true,
+                        prefixIcon: Icons.lock_outline,
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          child: Text(
+                            'Forgot Password?',
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : PrimaryButton(
+                              text: 'Login',
+                              onPressed: _login,
+                            ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              
+              const SizedBox(height: 10),
+              
+              // Bottom Registration Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(height: 1, width: 40, color: Colors.grey.shade300),
-                  const SizedBox(width: 8),
+                  Text(
+                    "Don't have an account?",
+                    style: AppTextStyles.bodySecondary,
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -143,17 +206,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     child: Text(
-                      'Create an Account',
+                      'Create one',
                       style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(height: 1, width: 40, color: Colors.grey.shade300),
                 ],
-              )
+              ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

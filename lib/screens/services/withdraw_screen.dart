@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -36,30 +37,24 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     final amount = double.tryParse(rawAmount);
 
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
-      );
+      AppSnackBar.showError(context, 'Please enter a valid amount');
       return;
     }
 
     if (_selectedAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a bank account')),
-      );
+      AppSnackBar.showError(context, 'Please select a bank account');
       return;
     }
 
     final wallet = context.read<WalletProvider>();
     if (amount > wallet.balance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Insufficient wallet balance')),
-      );
+      AppSnackBar.showError(context, 'Insufficient wallet balance');
       return;
     }
 
     setState(() => _isLoading = true);
 
-    final success = await wallet.processTransaction(amount, type: 'WITHDRAW');
+    final success = await wallet.processWithdrawal(amount, _selectedAccount!);
 
     setState(() => _isLoading = false);
 
@@ -103,9 +98,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Withdrawal failed. Please try again.')),
-        );
+        AppSnackBar.showError(context, 'Withdrawal failed. Please try again.');
       }
     }
   }

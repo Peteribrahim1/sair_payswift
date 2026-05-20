@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 
-class CustomTextField extends StatelessWidget {
+class CustomTextField extends StatefulWidget {
   final String label;
   final String hint;
   final bool isPassword;
@@ -23,26 +23,51 @@ class CustomTextField extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  late bool _obscureText;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscureText = widget.isPassword;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          widget.label,
           style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextField(
-          controller: controller,
-          onChanged: onChanged,
-          obscureText: isPassword,
-          keyboardType: keyboardType,
+          controller: widget.controller,
+          onChanged: widget.onChanged,
+          obscureText: _obscureText,
+          keyboardType: widget.keyboardType,
           style: AppTextStyles.body,
           decoration: InputDecoration(
-            hintText: hint,
+            hintText: widget.hint,
             hintStyle: AppTextStyles.bodySecondary,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.grey) : null,
-            suffixIcon: isPassword ? const Icon(Icons.visibility_off, color: Colors.grey) : null,
+            prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon, color: Colors.grey) : null,
+            suffixIcon: widget.isPassword
+                ? IconButton(
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureText = !_obscureText;
+                      });
+                    },
+                  )
+                : null,
             filled: true,
             fillColor: Theme.of(context).cardColor,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

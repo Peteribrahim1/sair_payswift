@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Use 10.0.2.2 for Android emulator to connect to localhost
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  // Live Render Backend URL
+  static const String baseUrl = 'https://sair-payswift.onrender.com/api';
 
   static String? _token;
 
@@ -88,6 +88,25 @@ class ApiService {
       Uri.parse('$baseUrl/services/transact'),
       headers: _headers,
       body: jsonEncode({'type': type, 'amount': amount}),
+    );
+    return _handleResponse(response);
+  }
+
+  // ─── Withdraw ─────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> withdrawFunds({
+    required double amount,
+    required String bankName,
+    required String accountNumber,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/transactions/withdraw'),
+      headers: _headers,
+      body: jsonEncode({
+        'amount': amount,
+        'bankName': bankName,
+        'accountNumber': accountNumber,
+      }),
     );
     return _handleResponse(response);
   }

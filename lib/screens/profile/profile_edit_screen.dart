@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -40,16 +41,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
     if (success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully'), backgroundColor: Colors.green),
-        );
+        AppSnackBar.showSuccess(context, 'Profile updated successfully');
         Navigator.pop(context);
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update profile'), backgroundColor: Colors.red),
-        );
+        AppSnackBar.showError(context, 'Failed to update profile');
       }
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -29,9 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _phoneController.text.isEmpty ||
         _emailController.text.isEmpty || 
         _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      AppSnackBar.showError(context, 'Please fill all fields');
       return;
     }
 
@@ -65,9 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration Failed: $e')),
-        );
+        AppSnackBar.showError(context, 'Registration Failed: $e');
       }
     } finally {
       if (mounted) {
@@ -89,91 +86,156 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('Register', style: AppTextStyles.subtitle),
-        centerTitle: true,
-      ),
+      backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false, // Extend gradient behind status bar
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              Text(
-                'Create Account',
-                style: AppTextStyles.headline1.copyWith(fontSize: 28),
-              ),
-              const SizedBox(height: 40),
-              CustomTextField(
-                controller: _firstNameController,
-                label: 'First Name',
-                hint: 'John',
-                keyboardType: TextInputType.name,
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                controller: _lastNameController,
-                label: 'Last Name',
-                hint: 'Doe',
-                keyboardType: TextInputType.name,
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                controller: _phoneController,
-                label: 'Phone Number',
-                hint: '08012345678',
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                controller: _emailController,
-                label: 'Email',
-                hint: 'johndoe@email.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 24),
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Password',
-                hint: 'Create a Password',
-                isPassword: true,
-              ),
-              const SizedBox(height: 40),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      text: 'Sign Up',
-                      onPressed: _register,
+              // Beautiful Gradient Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 40),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryDark, AppColors.secondaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SafeArea(
+                      bottom: false,
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        alignment: Alignment.centerLeft,
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
                     ),
-              const SizedBox(height: 24),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Create Account',
+                      style: AppTextStyles.headline1.copyWith(
+                        fontSize: 32,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Join Sair to start managing your payments.',
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Elevated Form Card
+              Transform.translate(
+                offset: const Offset(0, -20),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.cardShadow,
+                        blurRadius: 20,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomTextField(
+                        controller: _firstNameController,
+                        label: 'First Name',
+                        hint: 'John',
+                        keyboardType: TextInputType.name,
+                        prefixIcon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _lastNameController,
+                        label: 'Last Name',
+                        hint: 'Doe',
+                        keyboardType: TextInputType.name,
+                        prefixIcon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _phoneController,
+                        label: 'Phone Number',
+                        hint: '08012345678',
+                        keyboardType: TextInputType.phone,
+                        prefixIcon: Icons.phone_outlined,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        hint: 'johndoe@email.com',
+                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: Icons.email_outlined,
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _passwordController,
+                        label: 'Password',
+                        hint: 'Create a Password',
+                        isPassword: true,
+                        prefixIcon: Icons.lock_outline,
+                      ),
+                      const SizedBox(height: 32),
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : PrimaryButton(
+                              text: 'Sign Up',
+                              onPressed: _register,
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 10),
+              
+              // Bottom Login Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                    Text(
                     'Already have an account?',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    style: AppTextStyles.bodySecondary,
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
                       'Log in',
                       style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
                       ),
                     ),
                   ),
                 ],
-              )
+              ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
