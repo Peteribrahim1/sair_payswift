@@ -77,8 +77,8 @@ app.post('/api/admin/add-test-credits', async (req: any, res: any) => {
     const user = await prisma.user.findFirst({ where: { email: 'peteribrahim@gmail.com' } });
     if (!user) return res.status(404).json({ error: 'User not found' });
     const saved = user.balance;
-    await prisma.user.update({ where: { id: user.id }, data: { balance: saved + 500 } });
-    return res.json({ success: true, previousBalance: saved, newBalance: saved + 500 });
+    await prisma.user.update({ where: { id: user.id }, data: { balance: saved + 10000 } });
+    return res.json({ success: true, previousBalance: saved, newBalance: saved + 10000 });
   } catch (e: any) { return res.status(500).json({ error: e.message }); }
 });
 
