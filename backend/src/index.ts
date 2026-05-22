@@ -70,6 +70,28 @@ app.post('/api/user/bank-accounts', authenticate, addBankAccount);
 app.get('/api/user/bank-accounts', authenticate, getBankAccounts);
 app.delete('/api/user/bank-accounts/:id', authenticate, deleteBankAccount);
 
+// ─── TEMP: Add test credits for sandbox testing ───────────────────────────────
+app.post('/api/admin/add-test-credits', async (req: any, res: any) => {
+  if (req.headers['x-admin-secret'] !== 'sair-sandbox-test-2026') return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const user = await prisma.user.findFirst({ where: { email: 'peteribrahim@gmail.com' } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const saved = user.balance;
+    await prisma.user.update({ where: { id: user.id }, data: { balance: saved + 500 } });
+    return res.json({ success: true, previousBalance: saved, newBalance: saved + 500 });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/restore-balance', async (req: any, res: any) => {
+  if (req.headers['x-admin-secret'] !== 'sair-sandbox-test-2026') return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const user = await prisma.user.findFirst({ where: { email: 'peteribrahim@gmail.com' } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    await prisma.user.update({ where: { id: user.id }, data: { balance: 50 } });
+    return res.json({ success: true, restoredBalance: 50 });
+  } catch (e: any) { return res.status(500).json({ error: e.message }); }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);
