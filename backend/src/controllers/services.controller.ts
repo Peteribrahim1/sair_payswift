@@ -14,6 +14,7 @@ import {
   vtpassGetCablePlans,
   vtpassVerifySmartCard,
 } from '../services/vtpass.service';
+import { AirtimeCashService } from '../services/airtime-cash.service';
 
 // ─── Helper: deduct wallet & log transaction ─────────────────────────────────
 async function recordTransaction(
@@ -277,5 +278,38 @@ export const transact = async (req: AuthRequest, res: Response) => {
     res.json({ success: true, balance: result[0].balance, transaction: result[1] });
   } catch (error) {
     res.status(500).json({ error: 'Transaction failed' });
+  }
+};
+
+// ─── POST /api/services/convert-airtime ──────────────────────────────────────
+export const convertAirtime = async (req: AuthRequest, res: Response) => {
+  const { amount, network, phone } = req.body;
+  const userId = req.user!.id;
+
+  if (!amount || !network || !phone) {
+    return res.status(400).json({ error: 'amount, network, and phone are required' });
+  }
+
+  try {
+    const result = await AirtimeCashService.initializeConversion(amount, network, phone, userId);
+    res.json(result);
+  } catch (error: any) {
+    console.error('convertAirtime error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to initialize conversion' });
+  }
+};
+
+// ─── POST /api/webhooks/airtime ──────────────────────────────────────────────
+export const handleAirtimeWebhook = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await AirtimeCashService.handleWebhook(req.body);
+    if (result.success) {
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ success: false, message: result.message });
+    }
+  } catch (error: any) {
+    console.error('Webhook error:', error.message);
+    res.status(500).json({ error: 'Webhook processing failed' });
   }
 };

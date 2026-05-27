@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sair PaySwift - Administrative Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Gateway Login Screen -->
+  <div id="login-screen" class="login-wrapper">
+    <div class="login-box">
+      <i class="fa-solid fa-lock logo-lock"></i>
+      <h2>Admin Passcode Required</h2>
+      <p>Please enter your administrative secret code to access the Sair PaySwift system database.</p>
+      <form id="login-form">
+        <input type="password" id="passcode-input" placeholder="••••••••••••" required>
+        <button type="submit" class="btn btn-primary login-btn">Verify Access</button>
+      </form>
+      <div id="login-error" class="error-msg">Incorrect Passcode. Access Denied.</div>
+    </div>
+  </div>
+
+  <!-- Dashboard Main Layout (Hidden by default) -->
+  <div id="admin-layout" class="admin-container" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-bolt-lightning logo-icon"></i>
+        <span>Sair <span class="logo-accent">Admin</span></span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-tab-btn active" data-tab="tab-dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+        <button class="nav-tab-btn" data-tab="tab-users"><i class="fa-solid fa-users"></i> Users</button>
+        <button class="nav-tab-btn" data-tab="tab-transactions"><i class="fa-solid fa-receipt"></i> Transactions</button>
+        <button class="nav-tab-btn" data-tab="tab-tickets"><i class="fa-solid fa-headset"></i> Support Tickets <span id="pending-count-badge" class="badge-count" style="display: none;">0</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Exit Console</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-workspace">
+      <header class="workspace-header">
+        <h1 id="tab-title">Dashboard Overview</h1>
+        <div class="admin-profile">
+          <span class="avatar">IS</span>
+          <span>Info System Staff</span>
+        </div>
+      </header>
+
+      <!-- Content Tab Panels -->
+      <div class="workspace-content">
+        <!-- 1. DASHBOARD OVERVIEW -->
+        <div id="tab-dashboard" class="tab-panel active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-info">
+                <span class="card-title">Total Registered Users</span>
+                <h3 id="stat-users">0</h3>
+              </div>
+              <div class="stat-icon purple"><i class="fa-solid fa-user-group"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <span class="card-title">Total Transaction Logs</span>
+                <h3 id="stat-transactions">0</h3>
+              </div>
+              <div class="stat-icon blue"><i class="fa-solid fa-receipt"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <span class="card-title">Active Support Tickets</span>
+                <h3 id="stat-tickets">0</h3>
+              </div>
+              <div class="stat-icon red"><i class="fa-solid fa-headset"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <span class="card-title">Total Transaction Volume</span>
+                <h3 id="stat-volume">₦0.00</h3>
+              </div>
+              <div class="stat-icon green"><i class="fa-solid fa-wallet"></i></div>
+            </div>
+          </div>
+
+          <div class="dashboard-sections">
+            <div class="recent-box">
+              <h2>Recent System Activities</h2>
+              <div class="activities-list" id="dashboard-activities">
+                <!-- Loaded dynamically -->
+                <p class="loading-placeholder">Loading activities...</p>
+              </div>
+            </div>
+            <div class="recent-box">
+              <h2>Urgent Support Tickets</h2>
+              <div class="activities-list" id="dashboard-tickets">
+                <!-- Loaded dynamically -->
+                <p class="loading-placeholder">Loading urgent tickets...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. USERS MANAGEMENT -->
+        <div id="tab-users" class="tab-panel">
+          <div class="search-bar">
+            <div class="search-input">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="user-search" placeholder="Search users by name, email, or phone number...">
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Full Name</th>
+                  <th>Email Address</th>
+                  <th>Phone Number</th>
+                  <th>Wallet Balance</th>
+                  <th>KYC Status</th>
+                  <th>Registered On</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. TRANSACTIONS LIST -->
+        <div id="tab-transactions" class="tab-panel">
+          <div class="search-bar">
+            <div class="search-input">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="tx-search" placeholder="Search by reference code or phone number...">
+            </div>
+            <div class="filter-group">
+              <select id="tx-filter-type">
+                <option value="">All Services</option>
+                <option value="AIRTIME">Airtime</option>
+                <option value="DATA">Data Bundle</option>
+                <option value="CONVERT_AIRTIME">Airtime Swap</option>
+                <option value="ELECTRICITY">Electricity</option>
+                <option value="CABLE_TV">Cable TV</option>
+                <option value="WITHDRAW">Withdrawal</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User Profile</th>
+                  <th>Transaction Type</th>
+                  <th>Amount</th>
+                  <th>Phone/Provider</th>
+                  <th>Reference Code</th>
+                  <th>Status</th>
+                  <th>Date/Time</th>
+                </tr>
+              </thead>
+              <tbody id="tx-table-body">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. SUPPORT TICKETS -->
+        <div id="tab-tickets" class="tab-panel">
+          <div class="ticket-filters">
+            <button class="filter-btn active" data-filter="all">All Issues</button>
+            <button class="filter-btn" data-filter="PENDING">Pending Tasks</button>
+            <button class="filter-btn" data-filter="RESOLVED">Resolved Board</button>
+          </div>
+          <div class="tickets-grid" id="tickets-container">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
+  // Local Backend URL (for Android Emulator sandbox testing)
+  static const String baseUrl = 'http://10.0.2.2:3000/api';
   // Live Render Backend URL
-  static const String baseUrl = 'https://sair-payswift.onrender.com/api';
+  // static const String baseUrl = 'https://sair-payswift.onrender.com/api';
 
   static String? _token;
 
@@ -61,6 +63,15 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  static Future<Map<String, dynamic>> uploadProfilePicture(String base64Image) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/user/profile-picture'),
+      headers: _headers,
+      body: jsonEncode({'profilePicture': base64Image}),
+    );
+    return _handleResponse(response);
+  }
+
   // ─── Wallet / Virtual Account ──────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> submitKyc({String? bvn, String? nin}) async {
@@ -77,6 +88,20 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl/wallet/virtual-account'),
       headers: _headers,
+    );
+    return _handleResponse(response);
+  }
+
+  // ─── Convert Airtime ────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> convertAirtime(String network, String phone, double amount) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/services/convert-airtime'),
+      headers: _headers,
+      body: jsonEncode({
+        'network': network,
+        'phone': phone,
+        'amount': amount,
+      }),
     );
     return _handleResponse(response);
   }
@@ -282,6 +307,24 @@ class ApiService {
     final response = await http.put(
       Uri.parse('$baseUrl/notifications/$id/read'),
       headers: _headers,
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> submitSupportTicket(String subject, String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/support/ticket'),
+      headers: _headers,
+      body: jsonEncode({'subject': subject, 'message': message}),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> sendAiChatMessage(String message) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/support/ai-chat'),
+      headers: _headers,
+      body: jsonEncode({'message': message}),
     );
     return _handleResponse(response);
   }

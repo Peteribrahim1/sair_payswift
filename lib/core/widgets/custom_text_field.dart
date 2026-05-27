@@ -10,6 +10,7 @@ class CustomTextField extends StatefulWidget {
   final IconData? prefixIcon;
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
+  final int maxLines;
 
   const CustomTextField({
     Key? key,
@@ -20,6 +21,7 @@ class CustomTextField extends StatefulWidget {
     this.prefixIcon,
     this.controller,
     this.onChanged,
+    this.maxLines = 1,
   }) : super(key: key);
 
   @override
@@ -50,6 +52,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           onChanged: widget.onChanged,
           obscureText: _obscureText,
           keyboardType: widget.keyboardType,
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
           style: AppTextStyles.body,
           decoration: InputDecoration(
             hintText: widget.hint,

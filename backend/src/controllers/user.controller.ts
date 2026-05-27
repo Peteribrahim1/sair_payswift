@@ -1,6 +1,8 @@
 import { Response } from 'express';
 import { prisma } from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import fs from 'fs';
+import path from 'path';
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
@@ -12,6 +14,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         fullName: true,
         phone: true,
         balance: true,
+        profilePicture: true,
         transactions: {
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -38,6 +41,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
         fullName: true,
         phone: true,
         balance: true,
+        profilePicture: true,
       },
     });
     res.json(user);
@@ -97,5 +101,81 @@ export const submitKyc = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('submitKyc error:', error.message);
     res.status(500).json({ error: error.message || 'Failed to verify KYC' });
+  }
+};
+
+export const uploadProfilePicture = async (req: AuthRequest, res: Response) => {
+  try {
+    const { profilePicture } = req.body; // base64 string
+    if (!profilePicture) {
+      return res.status(400).json({ error: 'profilePicture base64 string is required.' });
+    }
+
+    // Decode base64 image
+    const matches = profilePicture.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let base64Data = profilePicture;
+    let extension = 'jpg'; // fallback
+
+    if (matches && matches.length === 3) {
+      const type = matches[1];
+      base64Data = matches[2];
+      extension = type.split('/')[1] || 'jpg';
+      if (extension === 'jpeg') extension = 'jpg';
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Create uploads folder if it doesn't exist
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique name
+    const filename = `${req.user!.id}-${Date.now()}.${extension}`;
+    const filePath = path.join(uploadsDir, filename);
+
+    // Get current user to see if they already have an avatar, and delete it to clean up space
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { profilePicture: true },
+    });
+
+    if (currentUser?.profilePicture) {
+      const oldPath = path.join(uploadsDir, currentUser.profilePicture);
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.unlinkSync(oldPath);
+        } catch (err) {
+          console.error('Failed to delete old profile image:', err);
+        }
+      }
+    }
+
+    // Write file
+    fs.writeFileSync(filePath, buffer);
+
+    // Update user record
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { profilePicture: filename },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        balance: true,
+        profilePicture: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'Profile picture uploaded successfully.',
+      user: updatedUser,
+    });
+  } catch (error: any) {
+    console.error('uploadProfilePicture error:', error.message);
+    res.status(500).json({ error: 'Failed to upload profile picture.' });
   }
 };

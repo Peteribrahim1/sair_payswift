@@ -6,6 +6,7 @@ class WalletProvider extends ChangeNotifier {
   String _email = '';
   String _fullName = '';
   String _phone = '';
+  String _profilePicture = '';
   bool _isLoading = false;
   List<dynamic> _transactions = [];
 
@@ -23,6 +24,7 @@ class WalletProvider extends ChangeNotifier {
   String get email => _email;
   String get fullName => _fullName;
   String get phone => _phone;
+  String get profilePicture => _profilePicture;
   bool get isLoading => _isLoading;
   List<dynamic> get transactions => _transactions;
   List<Map<String, String>> get bankAccounts => _bankAccounts;
@@ -84,6 +86,7 @@ class WalletProvider extends ChangeNotifier {
       _email = data['email'] ?? '';
       _fullName = data['fullName'] ?? '';
       _phone = data['phone'] ?? '';
+      _profilePicture = data['profilePicture'] ?? '';
       _transactions = data['transactions'] ?? [];
       await fetchBankAccounts();
     } catch (e) {
@@ -99,12 +102,34 @@ class WalletProvider extends ChangeNotifier {
       final data = await ApiService.updateProfile(newFullName, newPhone);
       _fullName = data['fullName'] ?? '';
       _phone = data['phone'] ?? '';
+      _profilePicture = data['profilePicture'] ?? '';
       notifyListeners();
       return true;
     } catch (e) {
       debugPrint('Error updating profile: $e');
       return false;
     }
+  }
+
+  Future<bool> uploadProfilePicture(String base64Image) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final data = await ApiService.uploadProfilePicture(base64Image);
+      if (data['success'] == true) {
+        if (data['user'] != null) {
+          _profilePicture = data['user']['profilePicture'] ?? '';
+        }
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error uploading profile picture: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return false;
   }
 
   // ─── Legacy (FUND / CONVERT_AIRTIME) ──────────────────────────────────────

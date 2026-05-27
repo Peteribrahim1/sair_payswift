@@ -1,8 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../services/api_service.dart';
+import 'news_detail_screen.dart';
+import '../services/convert_airtime_screen.dart';
+
+class NewsAffiliateAd {
+  final String title;
+  final String description;
+  final String ctaText;
+  final String tag;
+  final LinearGradient gradient;
+  final IconData icon;
+  final Color themeColor;
+  final String actionKey;
+
+  const NewsAffiliateAd({
+    required this.title,
+    required this.description,
+    required this.ctaText,
+    required this.tag,
+    required this.gradient,
+    required this.icon,
+    required this.themeColor,
+    required this.actionKey,
+  });
+}
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({Key? key}) : super(key: key);
@@ -13,11 +40,111 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen> {
   late Future<List<dynamic>> _newsFuture;
+  final List<BannerAd> _bannerAds = [];
+  final List<BannerAd> _loadedBanners = [];
+
+  final List<NewsAffiliateAd> _affiliateAds = const [
+    NewsAffiliateAd(
+      title: 'PaySwift Premium Upgrade',
+      description: 'Unlock zero convenience fees, daily cashbacks, and VIP priority support.',
+      ctaText: 'Upgrade Now',
+      tag: 'SPONSORED',
+      gradient: LinearGradient(
+        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      icon: Icons.workspace_premium,
+      themeColor: Color(0xFFFFA500),
+      actionKey: 'upgrade',
+    ),
+    NewsAffiliateAd(
+      title: 'Airtime to Cash - Instantly',
+      description: 'Got excess airtime? Convert it to real cash in your bank account in 2 minutes.',
+      ctaText: 'Convert Now',
+      tag: 'SPONSORED',
+      gradient: LinearGradient(
+        colors: [Color(0xFF3F51B5), Color(0xFF2196F3)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      icon: Icons.swap_horizontal_circle_outlined,
+      themeColor: Color(0xFF2196F3),
+      actionKey: 'convert_airtime',
+    ),
+    NewsAffiliateAd(
+      title: 'Refer & Earn ₦500 Cash',
+      description: 'Invite your friends. Get paid immediately once they complete their first transaction.',
+      ctaText: 'Invite Friends',
+      tag: 'PROMO',
+      gradient: LinearGradient(
+        colors: [Color(0xFFE91E63), Color(0xFF9C27B0)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      icon: Icons.people_outline,
+      themeColor: Color(0xFFE91E63),
+      actionKey: 'refer',
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
     _newsFuture = ApiService.getNews();
+    _loadAdMobBanners(3);
+  }
+
+  String get _bannerAdUnitId {
+    if (kDebugMode) {
+      return 'ca-app-pub-3940256099942544/6300978111'; // Google AdMob Test Banner ID
+    } else {
+      // In production/release, replace this with your real live Ad Unit ID
+      return 'ca-app-pub-3940256099942544/6300978111'; 
+    }
+  }
+
+  void _loadAdMobBanners(int count) {
+    for (int i = 0; i < count; i++) {
+      final banner = BannerAd(
+        adUnitId: _bannerAdUnitId,
+        size: AdSize.banner,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (mounted) {
+              setState(() {
+                _loadedBanners.add(ad as BannerAd);
+              });
+            }
+          },
+          onAdFailedToLoad: (ad, error) {
+            debugPrint('BannerAd failed to load: $error');
+            ad.dispose();
+          },
+          onAdClicked: (ad) {
+            // Click-bombing protection: immediately remove the clicked ad from feed and dispose it
+            if (mounted) {
+              setState(() {
+                _loadedBanners.remove(ad);
+              });
+              ad.dispose();
+              AppSnackBar.showInfo(context, 'Ad interaction logged safely.');
+            }
+          },
+        ),
+      );
+      banner.load();
+      _bannerAds.add(banner);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var ad in _bannerAds) {
+      ad.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -40,7 +167,6 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
-  // Assign a gradient based on the article index for visual variety
   LinearGradient _cardGradient(int index) {
     const gradients = [
       [Color(0xFF1A237E), Color(0xFF283593)],
@@ -91,6 +217,155 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
+  void _handleAdAction(BuildContext context, String actionKey) {
+    switch (actionKey) {
+      case 'convert_airtime':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ConvertAirtimeScreen()),
+        );
+        break;
+      case 'upgrade':
+        _showUpgradeDialog(context);
+        break;
+      case 'refer':
+        _showReferralDialog(context);
+        break;
+    }
+  }
+
+  void _showUpgradeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.secondaryDark,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.workspace_premium, size: 48, color: Colors.amber),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Sair VIP Upgrade',
+                  style: AppTextStyles.headlineLight.copyWith(fontSize: 22, color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Upgrade to VIP to enjoy 0% convenience fees on all bill payments and get premium cashbacks on your purchases!',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySecondary.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    AppSnackBar.showSuccess(context, 'Successfully upgraded to PaySwift VIP!');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  child: const Text('Upgrade Now (₦2,500/yr)', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text('Maybe Later', style: TextStyle(color: Colors.grey.shade400)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showReferralDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppColors.secondaryDark,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.pink.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.share, size: 48, color: Colors.pink),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Refer & Earn Cash',
+                  style: AppTextStyles.headlineLight.copyWith(fontSize: 22, color: Colors.white),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Share your unique referral code. When your friends register and complete a wallet funding of ₦2,000 or more, you get paid ₦500 instantly!',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySecondary.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'PAYSWIFT500',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy, color: Colors.pink),
+                        onPressed: () {
+                          Clipboard.setData(const ClipboardData(text: 'PAYSWIFT500'));
+                          Navigator.pop(dialogContext);
+                          AppSnackBar.showSuccess(context, 'Referral code copied to clipboard!');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text('Close', style: TextStyle(color: Colors.grey.shade400)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,17 +402,47 @@ class _NewsScreenState extends State<NewsScreen> {
           }
 
           final newsItems = snapshot.data!;
+          final feedItems = <dynamic>[];
+          int affiliateAdIndex = 0;
+          int admobAdIndex = 0;
+
+          for (int i = 0; i < newsItems.length; i++) {
+            feedItems.add(newsItems[i]);
+
+            // Interleave Custom Affiliate Card after every 2 articles
+            if ((i + 1) % 2 == 0 && affiliateAdIndex < _affiliateAds.length) {
+              feedItems.add(_affiliateAds[affiliateAdIndex]);
+              affiliateAdIndex++;
+            }
+
+            // Interleave AdMob Banner after every 3 articles (overall index offsets)
+            // But only if we have successfully loaded AdMob banners available!
+            if ((i + 1) % 3 == 0 && admobAdIndex < _loadedBanners.length) {
+              feedItems.add(_loadedBanners[admobAdIndex]);
+              admobAdIndex++;
+            }
+          }
+
           return RefreshIndicator(
             color: AppColors.buttonColor,
             onRefresh: _refresh,
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              itemCount: newsItems.length,
+              itemCount: feedItems.length,
               itemBuilder: (context, index) {
-                final item = newsItems[index];
+                final item = feedItems[index];
+                Widget childWidget;
+                if (item is NewsAffiliateAd) {
+                  childWidget = _buildAffiliateAdCard(context, item);
+                } else if (item is BannerAd) {
+                  childWidget = _buildAdMobBannerCard(item);
+                } else {
+                  childWidget = _buildNewsCard(context, item as Map<dynamic, dynamic>, index);
+                }
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 20),
-                  child: _buildNewsCard(context, item, index),
+                  child: childWidget,
                 );
               },
             ),
@@ -147,11 +452,188 @@ class _NewsScreenState extends State<NewsScreen> {
     );
   }
 
+  Widget _buildAdMobBannerCard(BannerAd ad) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.info_outline, size: 10, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(
+                'SPONSORED GOOGLE AD',
+                style: AppTextStyles.bodySecondary.copyWith(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: SizedBox(
+              width: ad.size.width.toDouble(),
+              height: ad.size.height.toDouble(),
+              child: AdWidget(ad: ad),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAffiliateAdCard(BuildContext context, NewsAffiliateAd ad) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ad.themeColor.withOpacity(0.2), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: ad.themeColor.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // Background decorative gradient glow
+          Positioned(
+            right: -30,
+            bottom: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    ad.themeColor.withOpacity(0.3),
+                    ad.themeColor.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    // Glow Icon Container
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: ad.gradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: ad.themeColor.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(ad.icon, size: 24, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ad.title,
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: ad.themeColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              ad.tag,
+                              style: TextStyle(
+                                color: ad.themeColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  ad.description,
+                  style: AppTextStyles.bodySecondary.copyWith(
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: () => _handleAdAction(context, ad.actionKey),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      backgroundColor: ad.themeColor,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 4,
+                      shadowColor: ad.themeColor.withOpacity(0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          ad.ctaText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.open_in_new, size: 14, color: Colors.black),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNewsCard(BuildContext context, Map<dynamic, dynamic> item, int index) {
     final title = item['title'] ?? 'No Title';
     final category = item['source']?['name'] ?? 'General';
     final publishedAt = item['publishedAt'] as String?;
-    final articleUrl = item['url'] as String?;
     final timeAgo = _relativeTime(publishedAt);
     final gradient = _cardGradient(index);
     final catColor = _categoryColor(category);
@@ -180,7 +662,6 @@ class _NewsScreenState extends State<NewsScreen> {
             decoration: BoxDecoration(gradient: gradient),
             child: Stack(
               children: [
-                // Decorative circles for depth
                 Positioned(
                   right: -20,
                   top: -20,
@@ -212,7 +693,6 @@ class _NewsScreenState extends State<NewsScreen> {
             ),
           ),
 
-          // Content
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -227,7 +707,6 @@ class _NewsScreenState extends State<NewsScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    // Category chip
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
@@ -252,7 +731,6 @@ class _NewsScreenState extends State<NewsScreen> {
                       ),
                     ),
                     const Spacer(),
-                    // Time ago
                     Row(
                       children: [
                         Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
@@ -266,17 +744,19 @@ class _NewsScreenState extends State<NewsScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Read more
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () async {
-                      if (articleUrl != null) {
-                        final uri = Uri.parse(articleUrl);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      }
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NewsDetailScreen(
+                            article: item,
+                            bannerGradient: gradient,
+                          ),
+                        ),
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),

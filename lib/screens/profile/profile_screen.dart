@@ -8,6 +8,7 @@ import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import '../history/transaction_history_screen.dart';
 import 'bank_accounts_screen.dart';
+import 'help_support_screen.dart';
 import 'profile_edit_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -66,7 +67,7 @@ class ProfileScreen extends StatelessWidget {
                         height: 60,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
+                          gradient: wallet.profilePicture.isNotEmpty ? null : const LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [AppColors.primaryDark, AppColors.buttonColor],
@@ -80,15 +81,47 @@ class ProfileScreen extends StatelessWidget {
                           ],
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          _getInitials(wallet.email, wallet.fullName),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1,
-                          ),
-                        ),
+                        child: wallet.profilePicture.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(30),
+                                child: Image.network(
+                                  '${ApiService.baseUrl.replaceAll('/api', '')}/uploads/${wallet.profilePicture}',
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Text(
+                                      _getInitials(wallet.email, wallet.fullName),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    );
+                                  },
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            : Text(
+                                _getInitials(wallet.email, wallet.fullName),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -232,6 +265,12 @@ class ProfileScreen extends StatelessWidget {
             context,
             MaterialPageRoute(
                 builder: (context) => const BankAccountsScreen()),
+          );
+        } else if (title == 'Help & Support') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const HelpSupportScreen()),
           );
         }
       },

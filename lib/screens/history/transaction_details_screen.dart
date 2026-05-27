@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../profile/help_support_screen.dart';
 
 class TransactionDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> transaction;
@@ -139,18 +141,28 @@ class TransactionDetailsScreen extends StatelessWidget {
                         valueStyle: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            fontFamily: 'monospace')),
+                            fontFamily: 'monospace'),
+                        copyable: true,
+                        context: context),
 
-                  _buildRow('Transaction ID',
-                      displayRef.length > 14
-                          ? '${displayRef.substring(0, 14)}…'
-                          : displayRef),
+                  _buildRow('Transaction ID', displayRef,
+                      copyable: true,
+                      context: context),
                   _buildRow('Status', 'Completed', isStatus: true),
 
                   const SizedBox(height: 20),
 
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HelpSupportScreen(
+                            prefilledSubject: 'Issue with Transaction #$displayRef',
+                          ),
+                        ),
+                      );
+                    },
                     child: Text('Need help with this transaction?',
                         style: AppTextStyles.body.copyWith(
                             color: AppColors.primaryDark,
@@ -202,7 +214,7 @@ class TransactionDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildRow(String label, String value,
-      {bool isStatus = false, TextStyle? valueStyle}) {
+      {bool isStatus = false, TextStyle? valueStyle, bool copyable = false, BuildContext? context}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
       child: Row(
@@ -228,11 +240,43 @@ class TransactionDetailsScreen extends StatelessWidget {
             )
           else
             Flexible(
-              child: Text(value,
-                  textAlign: TextAlign.right,
-                  style: valueStyle ??
-                      AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold, fontSize: 13)),
+              child: copyable && context != null
+                  ? InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: value));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('$label copied to clipboard!'),
+                            backgroundColor: AppColors.primaryDark,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(value,
+                                  textAlign: TextAlign.right,
+                                  style: valueStyle ??
+                                      AppTextStyles.body.copyWith(
+                                          fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.copy, size: 14, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Text(value,
+                      textAlign: TextAlign.right,
+                      style: valueStyle ??
+                          AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.bold, fontSize: 13)),
             ),
         ],
       ),

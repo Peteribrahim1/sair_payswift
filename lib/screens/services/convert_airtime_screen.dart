@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../providers/wallet_provider.dart';
+import '../../services/api_service.dart';
 
 class ConvertAirtimeScreen extends StatefulWidget {
   const ConvertAirtimeScreen({Key? key}) : super(key: key);
@@ -61,18 +62,19 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // CONVERT_AIRTIME is a credit operation — adds payout to wallet
-      final success = await context
-          .read<WalletProvider>()
-          .processTransaction(_payout, type: 'CONVERT_AIRTIME');
-
+      final networkName = _networks[_selectedNetwork]['name'].toString().toLowerCase();
+      
+      final result = await ApiService.convertAirtime(networkName, phone, amount);
+      
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      if (success) {
-        _showSuccessDialog(amount, _payout);
+      if (result['success'] == true) {
+        // Refresh transactions to show the pending transaction
+        context.read<WalletProvider>().fetchProfile();
+        _showInstructionsDialog(result['instructions'], _payout);
       } else {
-        _showError('Conversion failed. Please try again.');
+        _showError(result['error'] ?? 'Conversion failed');
       }
     } catch (e) {
       if (!mounted) return;
@@ -85,7 +87,7 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
     AppSnackBar.showError(context, msg);
   }
 
-  void _showSuccessDialog(double sent, double received) {
+  void _showInstructionsDialog(String instructions, double expectedReceived) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -94,14 +96,28 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 72),
+            const Icon(Icons.info_outline, color: AppColors.primaryDark, size: 64),
             const SizedBox(height: 16),
-            Text('Conversion Successful!', style: AppTextStyles.subtitle),
-            const SizedBox(height: 8),
+            Text('Action Required', style: AppTextStyles.subtitle),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                instructions,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
-              '₦${received.toStringAsFixed(2)} has been added to your wallet.',
+              'Your wallet will automatically be credited with ₦${expectedReceived.toStringAsFixed(2)} once the transfer is confirmed by the network.',
               textAlign: TextAlign.center,
-              style: AppTextStyles.bodySecondary,
+              style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -115,9 +131,11 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
                 ),
                 onPressed: () {
                   Navigator.pop(context); // close dialog
-                  Navigator.pop(context); // close screen
+                  _phoneController.clear();
+                  _amountController.clear();
+                  setState(() {});
                 },
-                child: const Text('Done',
+                child: const Text('I Understand',
                     style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),

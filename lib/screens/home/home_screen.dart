@@ -16,6 +16,7 @@ import '../services/withdraw_screen.dart';
 import 'package:flutter/services.dart';
 import 'notifications_screen.dart';
 import '../history/analytics_screen.dart';
+import '../support/ai_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -213,6 +214,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.buttonColor,
+        child: const Icon(Icons.bolt, color: Colors.white, size: 28),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AiChatScreen()),
+          );
+        },
       ),
     );
   }

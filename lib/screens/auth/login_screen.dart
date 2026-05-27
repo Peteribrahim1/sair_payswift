@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -22,6 +23,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  void _loadSavedEmail() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString('last_used_email');
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        setState(() {
+          _emailController.text = savedEmail;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading saved email: $e');
+    }
+  }
+
   void _login() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       AppSnackBar.showError(context, 'Please fill all fields');
@@ -31,17 +52,27 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
       final response = await ApiService.login(
-        _emailController.text.trim(),
+        email,
         _passwordController.text.trim(),
       );
-      
+
       // Save Token
       ApiService.setToken(response['token']);
-      
+
+      // Save email for next time
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('last_used_email', email);
+      } catch (e) {
+        debugPrint('Error saving email: $e');
+      }
+
       // Fetch initial profile
       if (mounted) {
-        await Provider.of<WalletProvider>(context, listen: false).fetchProfile();
+        await Provider.of<WalletProvider>(context, listen: false)
+            .fetchProfile();
       }
 
       if (mounted) {
@@ -80,7 +111,8 @@ class _LoginScreenState extends State<LoginScreen> {
               // Beautiful Gradient Header
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 40),
+                padding: const EdgeInsets.only(
+                    top: 60, left: 24, right: 24, bottom: 40),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [AppColors.primaryDark, AppColors.secondaryDark],
@@ -98,7 +130,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     SafeArea(
                       bottom: false,
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_ios,
+                            color: Colors.white),
                         padding: EdgeInsets.zero,
                         alignment: Alignment.centerLeft,
                         onPressed: () {
@@ -126,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              
+
               // Elevated Form Card
               Transform.translate(
                 offset: const Offset(0, -20),
@@ -187,9 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 10),
-              
+
               // Bottom Registration Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -202,7 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const RegisterScreen()),
                       );
                     },
                     child: Text(

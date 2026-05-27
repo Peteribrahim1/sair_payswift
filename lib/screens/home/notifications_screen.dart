@@ -116,7 +116,7 @@ class NotificationsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Just now', // Mock time
+                _relativeTime(transaction['createdAt']),
                 style: AppTextStyles.bodySecondary.copyWith(fontSize: 12),
               ),
             ],
@@ -124,5 +124,19 @@ class NotificationsScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _relativeTime(String? isoDate) {
+    if (isoDate == null) return 'Just now';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      return '${diff.inDays}d ago';
+    } catch (_) {
+      return 'Just now';
+    }
   }
 }

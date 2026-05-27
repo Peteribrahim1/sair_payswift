@@ -14,6 +14,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   List<dynamic> _notifications = [];
   bool _isLoading = true;
 
+  String _relativeTime(String? isoDate) {
+    if (isoDate == null) return 'Just now';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      debugPrint('NOTIF_DATE: isoDate=$isoDate, dt=$dt, now=$now, diff_min=${diff.inMinutes}, diff_hours=${diff.inHours}, diff_days=${diff.inDays}');
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      return '${diff.inDays}d ago';
+    } catch (e) {
+      debugPrint('NOTIF_DATE_ERR: isoDate=$isoDate, err=$e');
+      return 'Just now';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   itemCount: _notifications.length,
                   itemBuilder: (context, index) {
                     final notification = _notifications[index];
+                    debugPrint('NOTIF_KEYS: ${notification.keys.toList()}');
                     final isRead = notification['read'] == true;
                     return Card(
                       color: isRead ? Theme.of(context).cardColor : AppColors.secondaryDark.withOpacity(0.1),
@@ -90,11 +108,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            notification['message'] ?? '',
-                            style: AppTextStyles.body.copyWith(
-                              color: isRead ? Colors.grey : null,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                notification['message'] ?? '',
+                                style: AppTextStyles.body.copyWith(
+                                  color: isRead ? Colors.grey : null,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _relativeTime(notification['createdAt']),
+                                    style: AppTextStyles.bodySecondary.copyWith(fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
