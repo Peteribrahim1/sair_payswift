@@ -33,6 +33,9 @@ import {
   getAdminTransactions,
   getAdminTickets,
   resolveAdminTicket,
+  getPendingAirtime,
+  approveAirtime,
+  rejectAirtime,
 } from './controllers/admin.controller';
 
 const app = express();
@@ -149,6 +152,9 @@ app.get('/api/admin/users', getAdminUsers);
 app.get('/api/admin/transactions', getAdminTransactions);
 app.get('/api/admin/tickets', getAdminTickets);
 app.put('/api/admin/tickets/:id/resolve', resolveAdminTicket);
+app.get('/api/admin/airtime', getPendingAirtime);
+app.put('/api/admin/airtime/:id/approve', approveAirtime);
+app.put('/api/admin/airtime/:id/reject', rejectAirtime);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

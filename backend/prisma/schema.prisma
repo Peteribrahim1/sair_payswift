@@ -77,3 +77,10 @@ model Ticket {
   status    String   @default("PENDING") // PENDING | RESOLVED
   createdAt DateTime @default(now())
 }
+
+model WebhookLog {
+  id        String   @id @default(uuid())
+  provider  String
+  payload   String
+  createdAt DateTime @default(now())
+}

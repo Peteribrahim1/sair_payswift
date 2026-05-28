@@ -81,6 +81,19 @@ export class AirtimeCashService {
    */
   static async handleWebhook(payload: any) {
     console.log('CheetahPay Webhook received:', payload);
+    
+    // Log exactly what CheetahPay sent us to the database for debugging
+    try {
+      await prisma.webhookLog.create({
+        data: {
+          provider: 'CheetahPay',
+          payload: JSON.stringify(payload)
+        }
+      });
+    } catch (e) {
+      console.error('Failed to save webhook log:', e);
+    }
+
     // CheetahPay might send status, status_code, order_id, transaction_id, etc.
     const reference = payload.order_id || payload.reference;
     // Usually 'success' or 'credited' depending on the API. 

@@ -85,6 +85,7 @@ function fetchAllData() {
   fetchUsers();
   fetchTransactions();
   fetchTickets();
+  loadAirtime();
 }
 
 // Headers Helper
@@ -93,6 +94,80 @@ function getHeaders() {
     'Content-Type': 'application/json',
     'x-admin-secret': adminPasscode
   };
+}
+
+// ─── AIRTIME APPROVALS ────────────────────────────────────────────────────────
+
+async function loadAirtime() {
+  try {
+    const res = await fetch('/api/admin/airtime', { headers: getHeaders() });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      renderAirtimeTable(data.transactions);
+    }
+  } catch (error) {
+    console.error('Error loading airtime:', error);
+  }
+}
+
+function renderAirtimeTable(transactions) {
+  const tbody = document.getElementById('airtime-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (transactions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">No pending airtime conversions.</td></tr>';
+    return;
+  }
+  transactions.forEach(tx => {
+    const tr = document.createElement('tr');
+    const userName = tx.user ? tx.user.fullName : 'Unknown User';
+    
+    tr.innerHTML = `
+      <td>${userName}</td>
+      <td>${tx.phone}</td>
+      <td><span class="badge ${tx.network}">${tx.network.toUpperCase()}</span></td>
+      <td>₦${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+      <td><span class="badge PENDING">PENDING</span></td>
+      <td>
+        <button class="btn btn-sm" onclick="approveAirtime('${tx.id}')" style="background: #27ae60; color: white;">Approve</button>
+        <button class="btn btn-sm" onclick="rejectAirtime('${tx.id}')" style="background: #e74c3c; color: white; margin-left: 5px;">Reject</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function approveAirtime(id) {
+  if (!confirm('Are you sure you want to approve this airtime conversion? The user will be credited immediately.')) return;
+  try {
+    const res = await fetch(`/api/admin/airtime/${id}/approve`, { method: 'PUT', headers: getHeaders() });
+    if (res.ok) {
+      alert('Approved successfully.');
+      loadAirtime();
+      fetchStats();
+    } else {
+      const data = await res.json();
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('Failed to approve');
+  }
+}
+
+async function rejectAirtime(id) {
+  if (!confirm('Are you sure you want to reject this airtime conversion?')) return;
+  try {
+    const res = await fetch(`/api/admin/airtime/${id}/reject`, { method: 'PUT', headers: getHeaders() });
+    if (res.ok) {
+      alert('Rejected successfully.');
+      loadAirtime();
+    } else {
+      const data = await res.json();
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('Failed to reject');
+  }
 }
 
 // ─── Stat Counters Fetching ──────────────────────────────────────────────────
@@ -425,5 +500,6 @@ tabButtons.forEach(btn => {
     if (tabName === 'tab-users') fetchUsers();
     if (tabName === 'tab-transactions') fetchTransactions();
     if (tabName === 'tab-tickets') fetchTickets();
+    if (tabName === 'tab-airtime') loadAirtime();
   });
 });

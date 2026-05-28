@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // Local Backend URL (for Android Emulator sandbox testing)
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
-  // Live Render Backend URL
-  // static const String baseUrl = 'https://sair-payswift.onrender.com/api';
+  // static const String baseUrl = 'http://10.0.2.2:3000/api';
+  // Use live Render backend
+  static const String baseUrl = 'https://sair-payswift.onrender.com/api';
 
   static String? _token;
 

@@ -39,6 +39,7 @@
         <button class="nav-tab-btn" data-tab="tab-users"><i class="fa-solid fa-users"></i> Users</button>
         <button class="nav-tab-btn" data-tab="tab-transactions"><i class="fa-solid fa-receipt"></i> Transactions</button>
         <button class="nav-tab-btn" data-tab="tab-tickets"><i class="fa-solid fa-headset"></i> Support Tickets <span id="pending-count-badge" class="badge-count" style="display: none;">0</span></button>
+        <button class="nav-tab-btn" data-tab="tab-airtime"><i class="fa-solid fa-phone"></i> Airtime Approvals</button>
       </nav>
       <div class="sidebar-footer">
         <button id="logout-btn" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Exit Console</button>
@@ -183,6 +184,27 @@
           </div>
           <div class="tickets-grid" id="tickets-container">
             <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- 5. AIRTIME APPROVALS -->
+        <div id="tab-airtime" class="tab-panel">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Phone</th>
+                  <th>Network</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="airtime-table-body">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

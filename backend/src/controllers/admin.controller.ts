@@ -99,3 +99,81 @@ export const resolveAdminTicket = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
+// ─── AIRTIME TO CASH APPROVALS ────────────────────────────────────────────────
+export const getPendingAirtime = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where: { type: 'CONVERT_AIRTIME', status: 'PENDING' },
+      include: { user: { select: { fullName: true, email: true, phone: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, transactions });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch airtime transactions' });
+  }
+};
+
+export const approveAirtime = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { id } = req.params;
+  try {
+    const transaction = await prisma.transaction.findUnique({ where: { id } });
+    if (!transaction || transaction.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Transaction not pending or not found' });
+    }
+
+    await prisma.$transaction([
+      prisma.transaction.update({
+        where: { id },
+        data: { status: 'COMPLETED' }
+      }),
+      prisma.user.update({
+        where: { id: transaction.userId },
+        data: { balance: { increment: transaction.amount } }
+      }),
+      prisma.notification.create({
+        data: {
+          userId: transaction.userId,
+          title: 'Airtime Converted',
+          message: `Your airtime to cash conversion of ₦${transaction.amount} was approved and credited.`
+        }
+      })
+    ]);
+
+    res.json({ success: true, message: 'Approved and credited.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to approve airtime' });
+  }
+};
+
+export const rejectAirtime = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+  const { id } = req.params;
+  try {
+    const transaction = await prisma.transaction.findUnique({ where: { id } });
+    if (!transaction || transaction.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Transaction not pending or not found' });
+    }
+
+    await prisma.$transaction([
+      prisma.transaction.update({
+        where: { id },
+        data: { status: 'FAILED' }
+      }),
+      prisma.notification.create({
+        data: {
+          userId: transaction.userId,
+          title: 'Airtime Conversion Failed',
+          message: `Your airtime to cash conversion of ₦${transaction.amount} was rejected.`
+        }
+      })
+    ]);
+
+    res.json({ success: true, message: 'Rejected.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to reject airtime' });
+  }
+};
