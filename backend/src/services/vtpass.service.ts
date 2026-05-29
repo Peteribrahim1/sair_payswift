@@ -36,6 +36,10 @@ function assertSuccess(data: any, requestId: string, fallbackMsg: string): void 
     console.log(`[VTPass Sandbox] Simulated success for request ${requestId}`);
     return;
   }
+  
+  // Log the exact response from VTPass so we can debug live errors
+  console.error(`[VTPass Failure - Request ${requestId}]:`, JSON.stringify(data, null, 2));
+  
   throw new Error(data.response_description || fallbackMsg);
 }
 
