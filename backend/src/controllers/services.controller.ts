@@ -52,7 +52,21 @@ export const getDataPlans = async (req: AuthRequest, res: Response) => {
 
   try {
     const plans = await vtpassGetDataVariations(serviceID);
-    res.json({ plans });
+    
+    // Apply dynamic markup
+    let markup = 5.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) markup = config.dataMarkupPercent;
+
+    const markedUpPlans = plans.map((p: any) => {
+      const rawPrice = parseFloat(p.variation_amount);
+      if (!isNaN(rawPrice)) {
+         p.variation_amount = (rawPrice + (rawPrice * (markup / 100))).toString();
+      }
+      return p;
+    });
+
+    res.json({ plans: markedUpPlans });
   } catch (error: any) {
     console.error('getDataPlans error:', error.message);
     res.status(500).json({ error: 'Failed to fetch data plans' });
@@ -117,17 +131,25 @@ export const buyAirtime = async (req: AuthRequest, res: Response) => {
   if (!serviceID) return res.status(400).json({ error: `Unknown network: ${network}` });
 
   try {
+    // Get dynamic markup
+    let markup = 2.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) markup = config.airtimeMarkupPercent;
+    
+    const faceValue = parseFloat(amount.toString());
+    const totalCharge = faceValue + (faceValue * (markup / 100));
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
 
-    // Call VTPass
-    const { requestId } = await vtpassBuyAirtime(serviceID, phone, amount);
+    // Call VTPass with raw faceValue
+    const { requestId } = await vtpassBuyAirtime(serviceID, phone, faceValue);
 
-    // Deduct & log
+    // Deduct totalCharge & log
     const result = await recordTransaction(
-      userId, amount, 'AIRTIME', requestId, phone, network,
-      `₦${amount} airtime sent to ${phone} (${network})`
+      userId, totalCharge, 'AIRTIME', requestId, phone, network,
+      `₦${faceValue} airtime sent to ${phone} (${network})`
     );
 
     res.json({ success: true, balance: result[0].balance, transaction: result[1] });
@@ -139,28 +161,42 @@ export const buyAirtime = async (req: AuthRequest, res: Response) => {
 
 // ─── POST /api/services/data ─────────────────────────────────────────────────
 export const buyData = async (req: AuthRequest, res: Response) => {
-  const { network, phone, variationCode, amount } = req.body;
+  const { network, phone, variationCode } = req.body;
   const userId = req.user!.id;
 
-  if (!network || !phone || !variationCode || !amount) {
-    return res.status(400).json({ error: 'network, phone, variationCode and amount are required' });
+  if (!network || !phone || !variationCode) {
+    return res.status(400).json({ error: 'network, phone, variationCode are required' });
   }
 
   const serviceID = DATA_SERVICE_IDS[network];
   if (!serviceID) return res.status(400).json({ error: `Unknown network: ${network}` });
 
   try {
+    // 1. Fetch raw variations to find the raw amount
+    const plans = await vtpassGetDataVariations(serviceID);
+    const plan = plans.find((p: any) => p.variation_code === variationCode);
+    if (!plan) return res.status(400).json({ error: 'Invalid data plan selected' });
+    
+    const rawPrice = parseFloat(plan.variation_amount);
+
+    // 2. Get dynamic markup
+    let markup = 5.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) markup = config.dataMarkupPercent;
+
+    const totalCharge = rawPrice + (rawPrice * (markup / 100));
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
 
-    // Call VTPass
-    const { requestId } = await vtpassBuyData(serviceID, phone, variationCode, amount);
+    // Call VTPass with rawPrice
+    const { requestId } = await vtpassBuyData(serviceID, phone, variationCode, rawPrice);
 
-    // Deduct & log
+    // Deduct totalCharge & log
     const result = await recordTransaction(
-      userId, amount, 'DATA', requestId, phone, network,
-      `₦${amount} data bundle sent to ${phone} (${network})`
+      userId, totalCharge, 'DATA', requestId, phone, network,
+      `₦${rawPrice} data bundle sent to ${phone} (${network})`
     );
 
     res.json({ success: true, balance: result[0].balance, transaction: result[1] });
@@ -185,17 +221,25 @@ export const payElectricity = async (req: AuthRequest, res: Response) => {
   const variationCode = meterType === 'prepaid' ? 'prepaid' : 'postpaid';
 
   try {
+    // Get dynamic convenience fee
+    let fee = 50.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) fee = config.billConvenienceFee;
+
+    const rawAmount = parseFloat(amount.toString());
+    const totalCharge = rawAmount + fee;
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
 
-    // Call VTPass
-    const { requestId } = await vtpassPayElectricity(serviceID, meterNumber, variationCode, amount, phone);
+    // Call VTPass with rawAmount
+    const { requestId } = await vtpassPayElectricity(serviceID, meterNumber, variationCode, rawAmount, phone);
 
-    // Deduct & log
+    // Deduct & log totalCharge
     const result = await recordTransaction(
-      userId, amount, 'ELECTRICITY', requestId, phone, provider,
-      `₦${amount} electricity payment for meter ${meterNumber} (${provider})`
+      userId, totalCharge, 'ELECTRICITY', requestId, phone, provider,
+      `₦${rawAmount} electricity payment for meter ${meterNumber} (${provider})`
     );
 
     res.json({ success: true, balance: result[0].balance, transaction: result[1] });
@@ -218,17 +262,25 @@ export const payCableTV = async (req: AuthRequest, res: Response) => {
   if (!serviceID) return res.status(400).json({ error: `Unknown provider: ${provider}` });
 
   try {
+    // Get dynamic convenience fee
+    let fee = 50.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) fee = config.billConvenienceFee;
+
+    const rawAmount = parseFloat(amount.toString());
+    const totalCharge = rawAmount + fee;
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
 
-    // Call VTPass
-    const { requestId } = await vtpassPayCableTV(serviceID, smartCardNumber, variationCode, amount, phone);
+    // Call VTPass with rawAmount
+    const { requestId } = await vtpassPayCableTV(serviceID, smartCardNumber, variationCode, rawAmount, phone);
 
-    // Deduct & log
+    // Deduct & log totalCharge
     const result = await recordTransaction(
-      userId, amount, 'CABLE_TV', requestId, phone, provider,
-      `₦${amount} ${provider} subscription for card ${smartCardNumber}`
+      userId, totalCharge, 'CABLE_TV', requestId, phone, provider,
+      `₦${rawAmount} ${provider} subscription for card ${smartCardNumber}`
     );
 
     res.json({ success: true, balance: result[0].balance, transaction: result[1] });

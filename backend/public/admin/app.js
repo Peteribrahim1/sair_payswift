@@ -70,6 +70,12 @@ async function validateAndStartDashboard() {
       loginScreen.style.display = 'none';
       adminLayout.style.display = 'grid';
       fetchAllData();
+      
+      // Bind settings form
+      const settingsForm = document.getElementById('settings-form');
+      if (settingsForm) {
+        settingsForm.addEventListener('submit', handleSaveSettings);
+      }
     } else {
       throw new Error('Unauthorized');
     }
@@ -167,6 +173,56 @@ async function rejectAirtime(id) {
     }
   } catch (error) {
     alert('Failed to reject');
+  }
+}
+
+// ─── PRICING SETTINGS ────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/admin/settings', { headers: getHeaders() });
+    const data = await res.json();
+    if (data.success && data.settings) {
+      document.getElementById('set-data').value = data.settings.dataMarkupPercent;
+      document.getElementById('set-airtime').value = data.settings.airtimeMarkupPercent;
+      document.getElementById('set-airtime-cash').value = data.settings.airtimeToCashRate;
+      document.getElementById('set-bills').value = data.settings.billConvenienceFee;
+    }
+  } catch (err) {
+    console.error('Failed to load settings', err);
+  }
+}
+
+async function handleSaveSettings(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  const originalText = btn.innerText;
+  btn.innerText = 'Saving...';
+  
+  const payload = {
+    dataMarkupPercent: parseFloat(document.getElementById('set-data').value),
+    airtimeMarkupPercent: parseFloat(document.getElementById('set-airtime').value),
+    airtimeToCashRate: parseFloat(document.getElementById('set-airtime-cash').value),
+    billConvenienceFee: parseFloat(document.getElementById('set-bills').value)
+  };
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.innerText = 'Saved!';
+      setTimeout(() => btn.innerText = originalText, 2000);
+    } else {
+      alert('Failed to save settings');
+      btn.innerText = originalText;
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error saving settings');
+    btn.innerText = originalText;
   }
 }
 
@@ -501,5 +557,6 @@ tabButtons.forEach(btn => {
     if (tabName === 'tab-transactions') fetchTransactions();
     if (tabName === 'tab-tickets') fetchTickets();
     if (tabName === 'tab-airtime') loadAirtime();
+    if (tabName === 'tab-settings') loadSettings();
   });
 });

@@ -177,3 +177,57 @@ export const rejectAirtime = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to reject airtime' });
   }
 };
+
+// ─── SYSTEM SETTINGS & PRICING ────────────────────────────────────────────────
+export const getSystemSettings = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    let config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (!config) {
+      config = await prisma.appConfig.create({
+        data: {
+          id: 'global-config',
+          dataMarkupPercent: 5.0,
+          airtimeMarkupPercent: 2.0,
+          airtimeToCashRate: 70.0,
+          billConvenienceFee: 50.0
+        }
+      });
+    }
+    res.json({ success: true, settings: config });
+  } catch (error) {
+    console.error('getSystemSettings error:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+};
+
+export const updateSystemSettings = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { dataMarkupPercent, airtimeMarkupPercent, airtimeToCashRate, billConvenienceFee } = req.body;
+    
+    const config = await prisma.appConfig.upsert({
+      where: { id: 'global-config' },
+      update: {
+        dataMarkupPercent: Number(dataMarkupPercent),
+        airtimeMarkupPercent: Number(airtimeMarkupPercent),
+        airtimeToCashRate: Number(airtimeToCashRate),
+        billConvenienceFee: Number(billConvenienceFee)
+      },
+      create: {
+        id: 'global-config',
+        dataMarkupPercent: Number(dataMarkupPercent),
+        airtimeMarkupPercent: Number(airtimeMarkupPercent),
+        airtimeToCashRate: Number(airtimeToCashRate),
+        billConvenienceFee: Number(billConvenienceFee)
+      }
+    });
+
+    res.json({ success: true, settings: config, message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('updateSystemSettings error:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+};

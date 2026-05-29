@@ -7,7 +7,13 @@ export class AirtimeCashService {
    */
   static async initializeConversion(amount: number, network: string, phone: string, userId: string): Promise<any> {
     const reference = `AC-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const payout = amount * 0.70; // 70% payout
+    
+    // Get dynamic payout rate
+    let payoutRate = 70.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) payoutRate = config.airtimeToCashRate;
+
+    const payout = amount * (payoutRate / 100);
 
     // Create a pending transaction in our database
     const transaction = await prisma.transaction.create({

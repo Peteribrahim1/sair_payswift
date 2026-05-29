@@ -47,6 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _handleRefresh() async {
+    await context.read<WalletProvider>().fetchProfile();
+    await _fetchUnreadCount();
+  }
+
   Future<void> _openNotifications() async {
     await Navigator.push(
       context,
@@ -197,21 +202,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 24),
-              _buildServicesGrid(context),
-              const SizedBox(height: 24),
-              _buildSponsoredAd(),
-              const SizedBox(height: 20),
-            ],
+        child: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          color: AppColors.primaryDark,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 24),
+                _buildServicesGrid(context),
+                const SizedBox(height: 24),
+                _buildSponsoredAd(),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),

@@ -84,3 +84,12 @@ model WebhookLog {
   payload   String
   createdAt DateTime @default(now())
 }
+
+model AppConfig {
+  id                   String   @id @default("global-config")
+  dataMarkupPercent    Float    @default(5.0)  // e.g. 5%
+  airtimeMarkupPercent Float    @default(2.0)  // e.g. 2%
+  airtimeToCashRate    Float    @default(70.0) // e.g. 70% payout
+  billConvenienceFee   Float    @default(50.0) // e.g. 50 Naira flat fee
+  updatedAt            DateTime @updatedAt
+}

@@ -36,6 +36,8 @@ import {
   getPendingAirtime,
   approveAirtime,
   rejectAirtime,
+  getSystemSettings,
+  updateSystemSettings
 } from './controllers/admin.controller';
 
 const app = express();
@@ -153,11 +155,12 @@ app.get('/api/admin/transactions', getAdminTransactions);
 app.get('/api/admin/tickets', getAdminTickets);
 app.put('/api/admin/tickets/:id/resolve', resolveAdminTicket);
 app.get('/api/admin/airtime', getPendingAirtime);
-app.put('/api/admin/airtime/:id/approve', approveAirtime);
-app.put('/api/admin/airtime/:id/reject', rejectAirtime);
+app.post('/api/admin/airtime/:id/approve', approveAirtime);
+app.post('/api/admin/airtime/:id/reject', rejectAirtime);
+app.get('/api/admin/settings', getSystemSettings);
+app.put('/api/admin/settings', updateSystemSettings);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} [VTPass: ${process.env.VTPASS_ENV || 'sandbox'}]`);
 });
-
