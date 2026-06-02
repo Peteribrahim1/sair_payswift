@@ -37,7 +37,8 @@ import {
   approveAirtime,
   rejectAirtime,
   getSystemSettings,
-  updateSystemSettings
+  updateSystemSettings,
+  manuallyFundUser
 } from './controllers/admin.controller';
 
 const app = express();
@@ -159,6 +160,7 @@ app.post('/api/admin/airtime/:id/approve', approveAirtime);
 app.post('/api/admin/airtime/:id/reject', rejectAirtime);
 app.get('/api/admin/settings', getSystemSettings);
 app.put('/api/admin/settings', updateSystemSettings);
+app.post('/api/admin/users/:id/fund', manuallyFundUser);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

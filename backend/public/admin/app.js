@@ -369,6 +369,9 @@ function renderUsers() {
         </span>
       </td>
       <td>${date}</td>
+      <td>
+        <button onclick="openFundModal('${u.id}', '${(u.fullName || u.email).replace(/'/g, "\\'")}')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Manage Wallet</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -559,4 +562,48 @@ tabButtons.forEach(btn => {
     if (tabName === 'tab-airtime') loadAirtime();
     if (tabName === 'tab-settings') loadSettings();
   });
+});
+// ─── Manual Wallet Funding ───────────────────────────────────────────────────
+function openFundModal(userId, userName) {
+  document.getElementById('fund-user-id').value = userId;
+  document.getElementById('fund-modal-user-name').textContent = `User: ${userName}`;
+  document.getElementById('fund-amount').value = '';
+  document.getElementById('fund-reason').value = '';
+  document.getElementById('fund-action').value = 'CREDIT';
+  document.getElementById('fund-modal').style.display = 'flex';
+}
+
+document.getElementById('fund-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('fund-submit-btn');
+  btn.textContent = 'Processing...';
+  btn.disabled = true;
+
+  const id = document.getElementById('fund-user-id').value;
+  const amount = document.getElementById('fund-amount').value;
+  const action = document.getElementById('fund-action').value;
+  const reason = document.getElementById('fund-reason').value;
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/users/${id}/fund`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ amount: Number(amount), action, reason })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      alert(`Successfully updated wallet! New balance: ₦${data.user.balance}`);
+      document.getElementById('fund-modal').style.display = 'none';
+      fetchUsers(); // Refresh table
+    } else {
+      alert(data.error || 'Failed to update wallet');
+    }
+  } catch (error) {
+    console.error('Fund error:', error);
+    alert('Network error while updating wallet');
+  } finally {
+    btn.textContent = 'Confirm Adjustment';
+    btn.disabled = false;
+  }
 });

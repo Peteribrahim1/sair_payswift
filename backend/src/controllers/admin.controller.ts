@@ -231,3 +231,54 @@ export const updateSystemSettings = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update settings' });
   }
 };
+
+export const manuallyFundUser = async (req: Request, res: Response) => {
+  // Simple check for admin secret
+  const adminSecret = req.headers['x-admin-secret'];
+  if (adminSecret !== 'sair-sandbox-test-2026') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  const { amount, action, reason } = req.body;
+
+  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+  if (action !== 'CREDIT' && action !== 'DEBIT') {
+    return res.status(400).json({ error: 'Invalid action. Must be CREDIT or DEBIT.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const adjustment = action === 'CREDIT' ? Number(amount) : -Number(amount);
+    
+    if (action === 'DEBIT' && user.balance < Number(amount)) {
+      return res.status(400).json({ error: `Cannot debit ₦${amount}. User only has ₦${user.balance}.` });
+    }
+
+    const result = await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: { balance: { increment: adjustment } }
+      }),
+      prisma.transaction.create({
+        data: {
+          userId: id,
+          amount: Number(amount),
+          type: action === 'CREDIT' ? 'FUND' : 'WITHDRAW',
+          reference: `ADMIN_${action}_${Date.now()}`,
+          status: 'SUCCESS',
+          details: reason || `Manual Admin ${action}`,
+        }
+      })
+    ]);
+
+    res.json({ success: true, user: result[0], transaction: result[1] });
+  } catch (error) {
+    console.error('manuallyFundUser error:', error);
+    res.status(500).json({ error: 'Failed to manually adjust user balance' });
+  }
+};
