@@ -4,8 +4,27 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import * as admin from 'firebase-admin';
+import path from 'path';
+
+// Initialize Firebase Admin
+try {
+  let credential;
+  const serviceAccountPath = path.resolve(__dirname, '../firebase-service-account.json');
+  if (fs.existsSync(serviceAccountPath)) {
+    credential = admin.credential.cert(require(serviceAccountPath));
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    credential = admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+  } else {
+    throw new Error("Missing Firebase service account credentials.");
+  }
+  admin.initializeApp({ credential });
+  console.log('✅ Firebase Admin initialized');
+} catch (error) {
+  console.error('❌ Failed to initialize Firebase Admin:', error);
+}
 import { register, login } from './controllers/auth.controller';
-import { getProfile, updateProfile, submitKyc, uploadProfilePicture, uploadKycDocument } from './controllers/user.controller';
+import { getProfile, updateProfile, submitKyc, uploadProfilePicture, uploadKycDocument, saveFcmToken } from './controllers/user.controller';
 import {
   transact,
   buyAirtime,
@@ -24,7 +43,6 @@ import { getVirtualAccount, handleWebhook } from './controllers/wallet.controlle
 import { authenticate } from './middleware/auth.middleware';
 import { prisma } from './prisma';
 
-import path from 'path';
 import fs from 'fs';
 
 import { createTicket, aiChat } from './controllers/support.controller';
@@ -78,6 +96,7 @@ app.put('/api/user/profile', authenticate, updateProfile);
 app.post('/api/user/kyc', authenticate, submitKyc);
 app.post('/api/user/kyc-document', authenticate, express.json({ limit: '10mb' }), uploadKycDocument);
 app.post('/api/user/profile-picture', authenticate, express.json({ limit: '10mb' }), uploadProfilePicture);
+app.post('/api/user/fcm-token', authenticate, saveFcmToken);
 
 // ─── Service Routes (Real VTPass) ────────────────────────────────────────────
 app.post('/api/services/airtime', authenticate, buyAirtime);

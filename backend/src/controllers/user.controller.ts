@@ -225,3 +225,20 @@ export const uploadKycDocument = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to upload KYC document.' });
   }
 };
+
+export const saveFcmToken = async (req: AuthRequest, res: Response) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { fcmToken: token },
+    });
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error('saveFcmToken error:', error.message);
+    res.status(500).json({ error: 'Failed to save FCM token' });
+  }
+};

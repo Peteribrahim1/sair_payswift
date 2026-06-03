@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
+import * as admin from 'firebase-admin';
 
 // Simple middleware/helper to check admin passcode header
 const verifyAdminPasscode = (req: Request): boolean => {
@@ -344,7 +345,7 @@ export const broadcastNotification = async (req: Request, res: Response) => {
   }
 
   try {
-    const users = await prisma.user.findMany({ select: { id: true } });
+    const users = await prisma.user.findMany({ select: { id: true, fcmToken: true } });
     if (users.length === 0) {
       return res.json({ success: true, message: 'No users found to broadcast to.' });
     }
@@ -359,7 +360,24 @@ export const broadcastNotification = async (req: Request, res: Response) => {
       data: notifications,
     });
 
-    res.json({ success: true, message: `Broadcast sent to ${users.length} users successfully.` });
+    // Send FCM push notifications to all users who have an fcmToken
+    const tokens = users.map(u => u.fcmToken).filter(token => token !== null) as string[];
+    
+    let pushResultMsg = '';
+    if (tokens.length > 0) {
+      try {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          notification: { title, body: message }
+        });
+        pushResultMsg = ` Also sent push notifications (Success: ${response.successCount}, Failed: ${response.failureCount}).`;
+      } catch (fcmErr: any) {
+        console.error('FCM Multicast error:', fcmErr.message);
+        pushResultMsg = ' But failed to send push notifications.';
+      }
+    }
+
+    res.json({ success: true, message: `Broadcast saved to ${users.length} inboxes.${pushResultMsg}` });
   } catch (error: any) {
     console.error('broadcastNotification error:', error.message);
     res.status(500).json({ error: 'Failed to send broadcast.' });
