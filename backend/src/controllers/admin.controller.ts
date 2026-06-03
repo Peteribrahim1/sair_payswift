@@ -282,3 +282,55 @@ export const manuallyFundUser = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to manually adjust user balance' });
   }
 };
+
+export const getPendingKyc = async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { kycStatus: 'PENDING' },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        bvn: true,
+        nin: true,
+        kycDocument: true,
+        kycStatus: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('getPendingKyc error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending KYC' });
+  }
+};
+
+export const approveKyc = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { kycStatus: 'VERIFIED', kycVerified: true }
+    });
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('approveKyc error:', error);
+    res.status(500).json({ error: 'Failed to approve KYC' });
+  }
+};
+
+export const rejectKyc = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data: { kycStatus: 'REJECTED', kycVerified: false, kycDocument: null }
+    });
+    // Optional: delete the file from disk using fs.unlinkSync if you want.
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('rejectKyc error:', error);
+    res.status(500).json({ error: 'Failed to reject KYC' });
+  }
+};

@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { register, login } from './controllers/auth.controller';
-import { getProfile, updateProfile, submitKyc, uploadProfilePicture } from './controllers/user.controller';
+import { getProfile, updateProfile, submitKyc, uploadProfilePicture, uploadKycDocument } from './controllers/user.controller';
 import {
   transact,
   buyAirtime,
@@ -38,7 +38,10 @@ import {
   rejectAirtime,
   getSystemSettings,
   updateSystemSettings,
-  manuallyFundUser
+  manuallyFundUser,
+  getPendingKyc,
+  approveKyc,
+  rejectKyc
 } from './controllers/admin.controller';
 
 const app = express();
@@ -72,7 +75,8 @@ app.post('/api/auth/login', login);
 app.get('/api/user/profile', authenticate, getProfile);
 app.put('/api/user/profile', authenticate, updateProfile);
 app.post('/api/user/kyc', authenticate, submitKyc);
-app.post('/api/user/profile-picture', authenticate, uploadProfilePicture);
+app.post('/api/user/kyc-document', authenticate, express.json({ limit: '10mb' }), uploadKycDocument);
+app.post('/api/user/profile-picture', authenticate, express.json({ limit: '10mb' }), uploadProfilePicture);
 
 // ─── Service Routes (Real VTPass) ────────────────────────────────────────────
 app.post('/api/services/airtime', authenticate, buyAirtime);
@@ -161,6 +165,9 @@ app.post('/api/admin/airtime/:id/reject', rejectAirtime);
 app.get('/api/admin/settings', getSystemSettings);
 app.put('/api/admin/settings', updateSystemSettings);
 app.post('/api/admin/users/:id/fund', manuallyFundUser);
+app.get('/api/admin/kyc', getPendingKyc);
+app.post('/api/admin/kyc/:id/approve', approveKyc);
+app.post('/api/admin/kyc/:id/reject', rejectKyc);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

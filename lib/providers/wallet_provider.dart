@@ -7,6 +7,8 @@ class WalletProvider extends ChangeNotifier {
   String _fullName = '';
   String _phone = '';
   String _profilePicture = '';
+  String _kycStatus = 'UNVERIFIED';
+  bool _kycVerified = false;
   bool _isLoading = false;
   List<dynamic> _transactions = [];
 
@@ -25,6 +27,8 @@ class WalletProvider extends ChangeNotifier {
   String get fullName => _fullName;
   String get phone => _phone;
   String get profilePicture => _profilePicture;
+  String get kycStatus => _kycStatus;
+  bool get kycVerified => _kycVerified;
   bool get isLoading => _isLoading;
   List<dynamic> get transactions => _transactions;
   List<Map<String, String>> get bankAccounts => _bankAccounts;
@@ -87,6 +91,8 @@ class WalletProvider extends ChangeNotifier {
       _fullName = data['fullName'] ?? '';
       _phone = data['phone'] ?? '';
       _profilePicture = data['profilePicture'] ?? '';
+      _kycStatus = data['kycStatus'] ?? 'UNVERIFIED';
+      _kycVerified = data['kycVerified'] ?? false;
       _transactions = data['transactions'] ?? [];
       await fetchBankAccounts();
     } catch (e) {

@@ -83,6 +83,15 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  static Future<Map<String, dynamic>> uploadKycDocument(String base64Image) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/user/kyc-document'),
+      headers: _headers,
+      body: jsonEncode({'documentImage': base64Image}),
+    );
+    return _handleResponse(response);
+  }
+
   /// Fetches (or provisions) the user's dedicated virtual account from Paystack
   static Future<Map<String, dynamic>> getVirtualAccount() async {
     final response = await http.get(

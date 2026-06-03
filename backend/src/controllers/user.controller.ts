@@ -15,6 +15,8 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
         phone: true,
         balance: true,
         profilePicture: true,
+        kycStatus: true,
+        kycVerified: true,
         transactions: {
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -177,5 +179,49 @@ export const uploadProfilePicture = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('uploadProfilePicture error:', error.message);
     res.status(500).json({ error: 'Failed to upload profile picture.' });
+  }
+};
+
+export const uploadKycDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { documentImage } = req.body; // base64 string
+    if (!documentImage) {
+      return res.status(400).json({ error: 'documentImage base64 string is required.' });
+    }
+
+    const matches = documentImage.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let base64Data = documentImage;
+    let extension = 'jpg';
+
+    if (matches && matches.length === 3) {
+      const type = matches[1];
+      base64Data = matches[2];
+      if (type.includes('png')) extension = 'png';
+      else if (type.includes('jpeg') || type.includes('jpg')) extension = 'jpg';
+      else if (type.includes('pdf')) extension = 'pdf';
+    }
+
+    const fileName = `kyc_${req.user!.id}_${Date.now()}.${extension}`;
+    const filePath = path.join(__dirname, '../../uploads', fileName);
+
+    fs.writeFileSync(filePath, base64Data, 'base64');
+    const fileUrl = `/uploads/${fileName}`;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        kycDocument: fileUrl,
+        kycStatus: 'PENDING',
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: 'KYC Document uploaded successfully. Pending approval.',
+      kycStatus: updatedUser.kycStatus,
+    });
+  } catch (error: any) {
+    console.error('uploadKycDocument error:', error.message);
+    res.status(500).json({ error: 'Failed to upload KYC document.' });
   }
 };

@@ -10,6 +10,7 @@ import '../history/transaction_history_screen.dart';
 import 'bank_accounts_screen.dart';
 import 'help_support_screen.dart';
 import 'profile_edit_screen.dart';
+import 'kyc_upload_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -191,6 +192,22 @@ class ProfileScreen extends StatelessWidget {
                       const Divider(height: 1),
                       _buildListTile(
                           context, 'Bank Accounts', Icons.account_balance),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.verified_user, color: AppColors.buttonColor),
+                        title: Text('KYC Verification', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+                        subtitle: Text('Status: ${wallet.kycStatus}', style: TextStyle(color: wallet.kycVerified ? Colors.green : Colors.orange)),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                        onTap: () {
+                          if (!wallet.kycVerified && wallet.kycStatus != 'PENDING') {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const KycUploadScreen())).then((_) => wallet.fetchProfile());
+                          } else if (wallet.kycStatus == 'PENDING') {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your ID is currently under review.')));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your account is fully verified.')));
+                          }
+                        },
+                      ),
                       const Divider(height: 1),
                       _buildListTile(
                           context, 'Help & Support', Icons.support_agent),

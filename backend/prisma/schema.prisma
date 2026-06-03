@@ -25,6 +25,8 @@ model User {
   nin                  String?
   profilePicture       String?
   kycVerified          Boolean        @default(false)
+  kycStatus            String         @default("UNVERIFIED") // UNVERIFIED | PENDING | VERIFIED | REJECTED
+  kycDocument          String?        // URL/path to uploaded ID image
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   transactions         Transaction[]

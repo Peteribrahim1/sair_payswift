@@ -561,6 +561,7 @@ tabButtons.forEach(btn => {
     if (tabName === 'tab-tickets') fetchTickets();
     if (tabName === 'tab-airtime') loadAirtime();
     if (tabName === 'tab-settings') loadSettings();
+    if (tabName === 'tab-kyc') loadKyc();
   });
 });
 // ─── Manual Wallet Funding ───────────────────────────────────────────────────
@@ -607,3 +608,82 @@ document.getElementById('fund-form')?.addEventListener('submit', async (e) => {
     btn.disabled = false;
   }
 });
+// ─── KYC Approvals ──────────────────────────────────────────────────────────
+async function loadKyc() {
+  const container = document.getElementById('kyc-container');
+  container.innerHTML = '<p class="loading-placeholder">Loading pending KYC...</p>';
+
+  try {
+    const res = await fetch(`${API_BASE}/admin/kyc`, { headers: getHeaders() });
+    const data = await res.json();
+    
+    if (!data.success || data.users.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding: 24px;">No pending KYC requests at the moment.</p>';
+      return;
+    }
+
+    container.innerHTML = '';
+    data.users.forEach(u => {
+      const card = document.createElement('div');
+      card.className = 'ticket-card';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.gap = '12px';
+      
+      const docImg = u.kycDocument ? `<img src="${u.kycDocument}" style="width:100%; height:200px; object-fit:cover; border-radius:8px; border:1px solid #ddd;" alt="ID Card"/>` : '<div style="height:200px; background:#f0f0f0; display:flex; align-items:center; justify-content:center; border-radius:8px; color:#999;">No Image Uploaded</div>';
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between;">
+          <strong>${u.fullName || 'Unknown User'}</strong>
+          <span style="font-size:12px; color:#666;">${new Date(u.createdAt).toLocaleDateString()}</span>
+        </div>
+        <div style="font-size:13px; color:#555;">
+          <div><strong>Email:</strong> ${u.email}</div>
+          <div><strong>BVN:</strong> ${u.bvn || 'N/A'}</div>
+          <div><strong>NIN:</strong> ${u.nin || 'N/A'}</div>
+        </div>
+        ${docImg}
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button onclick="approveKyc('${u.id}')" class="btn btn-primary" style="flex:1;">Approve</button>
+          <button onclick="rejectKyc('${u.id}')" class="btn" style="flex:1; background:#fee; color:#e00;">Reject</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  } catch (error) {
+    console.error('loadKyc error:', error);
+    container.innerHTML = '<p style="color:red;">Failed to load KYC requests.</p>';
+  }
+}
+
+async function approveKyc(id) {
+  if (!confirm('Are you sure you want to verify this user?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/kyc/${id}/approve`, { method: 'POST', headers: getHeaders() });
+    const data = await res.json();
+    if (data.success) {
+      alert('KYC Approved successfully.');
+      loadKyc();
+    } else {
+      alert('Failed to approve KYC');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function rejectKyc(id) {
+  if (!confirm('Are you sure you want to reject this KYC?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/kyc/${id}/reject`, { method: 'POST', headers: getHeaders() });
+    const data = await res.json();
+    if (data.success) {
+      alert('KYC Rejected.');
+      loadKyc();
+    } else {
+      alert('Failed to reject KYC');
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
