@@ -1,8 +1,15 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// ─── Startup Safety Checks ────────────────────────────────────────────────────
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
 
 import * as admin from 'firebase-admin';
 import path from 'path';
@@ -53,6 +60,7 @@ import {
 import { getNotifications, markNotificationRead } from './controllers/notification.controller';
 import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
 import { authenticate } from './middleware/auth.middleware';
+import { authenticateAdmin } from './middleware/admin.middleware';
 import { prisma } from './prisma';
 
 import { createTicket, aiChat } from './controllers/support.controller';
@@ -77,6 +85,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// Auth endpoints: max 10 requests per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Purchase endpoints: max 30 requests per minute per IP
+const purchaseLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Too many purchase requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// General API limiter: max 200 requests per minute
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', generalLimiter);
+
 // Ensure uploads and public folders exist
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -97,8 +134,8 @@ app.get('/admin', (req, res) => {
 });
 
 // ─── Auth Routes ─────────────────────────────────────────────────────────────
-app.post('/api/auth/register', register);
-app.post('/api/auth/login', login);
+app.post('/api/auth/register', authLimiter, register);
+app.post('/api/auth/login', authLimiter, login);
 
 // ─── User Routes ─────────────────────────────────────────────────────────────
 app.get('/api/user/profile', authenticate, getProfile);
@@ -109,11 +146,11 @@ app.post('/api/user/profile-picture', authenticate, express.json({ limit: '10mb'
 app.post('/api/user/fcm-token', authenticate, saveFcmToken);
 
 // ─── Service Routes (Real VTPass) ────────────────────────────────────────────
-app.post('/api/services/airtime', authenticate, buyAirtime);
-app.post('/api/services/data', authenticate, buyData);
-app.post('/api/services/electricity', authenticate, payElectricity);
-app.post('/api/services/cable', authenticate, payCableTV);
-app.post('/api/services/convert-airtime', authenticate, convertAirtime);
+app.post('/api/services/airtime', authenticate, purchaseLimiter, buyAirtime);
+app.post('/api/services/data', authenticate, purchaseLimiter, buyData);
+app.post('/api/services/electricity', authenticate, purchaseLimiter, payElectricity);
+app.post('/api/services/cable', authenticate, purchaseLimiter, payCableTV);
+app.post('/api/services/convert-airtime', authenticate, purchaseLimiter, convertAirtime);
 
 // Variation / plan fetching (GET)
 app.get('/api/services/data-plans/:network', authenticate, getDataPlans);
@@ -128,7 +165,8 @@ app.get('/api/wallet/virtual-account', authenticate, getVirtualAccount);
 app.post('/api/wallet/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 app.post('/api/webhooks/airtime', express.json(), express.urlencoded({ extended: true }), handleAirtimeWebhook);
 
-// ─── Legacy: FUND / CONVERT_AIRTIME ─────────────────────────────────────────
+// ─── Legacy: FUND / CONVERT_AIRTIME — race-condition patched ─────────────────
+// WITHDRAW type has been removed. FUND and CONVERT_AIRTIME are credit-only.
 app.post('/api/services/transact', authenticate, transact);
 
 // ─── Notification Routes ─────────────────────────────────────────────────────
@@ -185,21 +223,21 @@ app.get('/api/admin/recent-transactions', async (req: any, res: any) => {
 // ─── Real Support Ticket & Admin Portal API Routes ────────────────────────────
 app.post('/api/support/ticket', authenticate, createTicket);
 app.post('/api/support/ai-chat', authenticate, aiChat);
-app.get('/api/admin/users', getAdminUsers);
-app.get('/api/admin/transactions', getAdminTransactions);
-app.get('/api/admin/tickets', getAdminTickets);
-app.put('/api/admin/tickets/:id/resolve', resolveAdminTicket);
-app.get('/api/admin/airtime', getPendingAirtime);
-app.post('/api/admin/airtime/:id/approve', approveAirtime);
-app.post('/api/admin/airtime/:id/reject', rejectAirtime);
-app.get('/api/admin/settings', getSystemSettings);
-app.put('/api/admin/settings', updateSystemSettings);
-app.post('/api/admin/users/:id/fund', manuallyFundUser);
-app.get('/api/admin/kyc', getPendingKyc);
-app.post('/api/admin/kyc/:id/approve', approveKyc);
-app.post('/api/admin/kyc/:id/reject', rejectKyc);
+app.get('/api/admin/users', authenticateAdmin, getAdminUsers);
+app.get('/api/admin/transactions', authenticateAdmin, getAdminTransactions);
+app.get('/api/admin/tickets', authenticateAdmin, getAdminTickets);
+app.put('/api/admin/tickets/:id/resolve', authenticateAdmin, resolveAdminTicket);
+app.get('/api/admin/airtime', authenticateAdmin, getPendingAirtime);
+app.post('/api/admin/airtime/:id/approve', authenticateAdmin, approveAirtime);
+app.post('/api/admin/airtime/:id/reject', authenticateAdmin, rejectAirtime);
+app.get('/api/admin/settings', authenticateAdmin, getSystemSettings);
+app.put('/api/admin/settings', authenticateAdmin, updateSystemSettings);
+app.post('/api/admin/users/:id/fund', authenticateAdmin, manuallyFundUser);
+app.get('/api/admin/kyc', authenticateAdmin, getPendingKyc);
+app.post('/api/admin/kyc/:id/approve', authenticateAdmin, approveKyc);
+app.post('/api/admin/kyc/:id/reject', authenticateAdmin, rejectKyc);
 
-app.post('/api/admin/broadcast', express.json(), broadcastNotification);
+app.post('/api/admin/broadcast', authenticateAdmin, express.json(), broadcastNotification);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

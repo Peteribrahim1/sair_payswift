@@ -16,32 +16,52 @@ import {
 } from '../services/vtpass.service';
 import { AirtimeCashService } from '../services/airtime-cash.service';
 
-// ─── Helper: deduct wallet & log transaction ─────────────────────────────────
-async function recordTransaction(
-  userId: string,
-  amount: number,
-  type: string,
-  reference: string,
-  phone?: string,
-  network?: string,
-  notificationMsg?: string
-) {
-  return prisma.$transaction([
+// ─── Helper: Atomic Debit ──────────────────────────────────────────────────────
+async function debitWalletAndCreateTx(userId: string, amount: number, type: string, reference: string, phone?: string, network?: string) {
+  if (amount <= 0) throw new Error('Amount must be greater than zero');
+  
+  const result = await prisma.user.updateMany({
+    where: { id: userId, balance: { gte: amount } },
+    data: { balance: { decrement: amount } },
+  });
+
+  if (result.count === 0) {
+    throw new Error(`Insufficient balance. Total charge is ₦${amount.toFixed(2)}`);
+  }
+
+  return prisma.transaction.create({
+    data: { userId, amount, type, status: 'PENDING', reference, phone, network },
+  });
+}
+
+// ─── Helper: Refund Wallet on Failure ─────────────────────────────────────────
+async function refundWalletAndFailTx(userId: string, amount: number, txId: string) {
+  await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
-      data: { balance: { decrement: amount } },
+      data: { balance: { increment: amount } },
     }),
-    prisma.transaction.create({
-      data: { userId, amount, type, status: 'COMPLETED', reference, phone, network },
-    }),
-    prisma.notification.create({
-      data: {
-        userId,
-        title: 'Transaction Successful',
-        message: notificationMsg ?? `Your ${type} transaction of ₦${amount} was successful.`,
-      },
+    prisma.transaction.update({
+      where: { id: txId },
+      data: { status: 'FAILED' },
     }),
   ]);
+}
+
+// ─── Helper: Complete Transaction & Notify ────────────────────────────────────
+async function completeTransaction(userId: string, txId: string, title: string, message: string) {
+  await prisma.$transaction([
+    prisma.transaction.update({
+      where: { id: txId },
+      data: { status: 'COMPLETED' },
+    }),
+    prisma.notification.create({
+      data: { userId, title, message },
+    }),
+  ]);
+  
+  // Return updated user balance
+  return prisma.user.findUnique({ where: { id: userId }, select: { balance: true } });
 }
 
 // ─── GET /api/services/data-plans/:network ───────────────────────────────────
@@ -127,32 +147,38 @@ export const buyAirtime = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'network, phone and amount are required' });
   }
 
+  const faceValue = parseFloat(amount.toString());
+  if (isNaN(faceValue) || faceValue <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
   const serviceID = AIRTIME_SERVICE_IDS[network];
   if (!serviceID) return res.status(400).json({ error: `Unknown network: ${network}` });
 
   try {
-    // Get dynamic markup
     let markup = 2.0;
     const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
     if (config) markup = config.airtimeMarkupPercent;
     
-    const faceValue = parseFloat(amount.toString());
     const totalCharge = faceValue + (faceValue * (markup / 100));
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
+    // 1. Atomically debit the wallet
+    const tx = await debitWalletAndCreateTx(userId, totalCharge, 'AIRTIME', `PENDING-${Date.now()}`, phone, network);
 
-    // Call VTPass with raw faceValue
-    const { requestId } = await vtpassBuyAirtime(serviceID, phone, faceValue);
-
-    // Deduct totalCharge & log
-    const result = await recordTransaction(
-      userId, totalCharge, 'AIRTIME', requestId, phone, network,
-      `₦${faceValue} airtime sent to ${phone} (${network})`
-    );
-
-    res.json({ success: true, balance: result[0].balance, transaction: result[1] });
+    try {
+      // 2. Call VTPass
+      const { requestId } = await vtpassBuyAirtime(serviceID, phone, faceValue);
+      
+      // 3. Complete and notify
+      await prisma.transaction.update({ where: { id: tx.id }, data: { reference: requestId } }); // Update ref
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${faceValue} airtime sent to ${phone} (${network})`);
+      
+      res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: requestId } });
+    } catch (apiError: any) {
+      // Refund if VTPass fails
+      await refundWalletAndFailTx(userId, totalCharge, tx.id);
+      throw new Error(apiError.message || 'Airtime purchase failed at provider');
+    }
   } catch (error: any) {
     console.error('buyAirtime error:', error.message);
     res.status(500).json({ error: error.message || 'Airtime purchase failed' });
@@ -178,28 +204,31 @@ export const buyData = async (req: AuthRequest, res: Response) => {
     if (!plan) return res.status(400).json({ error: 'Invalid data plan selected' });
     
     const rawPrice = parseFloat(plan.variation_amount);
+    if (isNaN(rawPrice) || rawPrice <= 0) return res.status(400).json({ error: 'Invalid data plan amount' });
 
-    // 2. Get dynamic markup
     let markup = 5.0;
     const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
     if (config) markup = config.dataMarkupPercent;
 
     const totalCharge = rawPrice + (rawPrice * (markup / 100));
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
+    // 2. Atomically debit the wallet
+    const tx = await debitWalletAndCreateTx(userId, totalCharge, 'DATA', `PENDING-${Date.now()}`, phone, network);
 
-    // Call VTPass with rawPrice
-    const { requestId } = await vtpassBuyData(serviceID, phone, variationCode, rawPrice);
-
-    // Deduct totalCharge & log
-    const result = await recordTransaction(
-      userId, totalCharge, 'DATA', requestId, phone, network,
-      `₦${rawPrice} data bundle sent to ${phone} (${network})`
-    );
-
-    res.json({ success: true, balance: result[0].balance, transaction: result[1] });
+    try {
+      // 3. Call VTPass
+      const { requestId } = await vtpassBuyData(serviceID, phone, variationCode, rawPrice);
+      
+      // 4. Complete and notify
+      await prisma.transaction.update({ where: { id: tx.id }, data: { reference: requestId } });
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${rawPrice} data bundle sent to ${phone} (${network})`);
+      
+      res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: requestId } });
+    } catch (apiError: any) {
+      // Refund if VTPass fails
+      await refundWalletAndFailTx(userId, totalCharge, tx.id);
+      throw new Error(apiError.message || 'Data purchase failed at provider');
+    }
   } catch (error: any) {
     console.error('buyData error:', error.message);
     res.status(500).json({ error: error.message || 'Data purchase failed' });
@@ -215,34 +244,40 @@ export const payElectricity = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'provider, meterNumber, meterType, amount and phone are required' });
   }
 
+  const rawAmount = parseFloat(amount.toString());
+  if (isNaN(rawAmount) || rawAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
   const serviceID = ELECTRICITY_SERVICE_IDS[provider];
   if (!serviceID) return res.status(400).json({ error: `Unknown provider: ${provider}` });
 
   const variationCode = meterType === 'prepaid' ? 'prepaid' : 'postpaid';
 
   try {
-    // Get dynamic convenience fee
     let fee = 50.0;
     const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
     if (config) fee = config.billConvenienceFee;
 
-    const rawAmount = parseFloat(amount.toString());
     const totalCharge = rawAmount + fee;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
+    // 1. Atomically debit the wallet
+    const tx = await debitWalletAndCreateTx(userId, totalCharge, 'ELECTRICITY', `PENDING-${Date.now()}`, phone, provider);
 
-    // Call VTPass with rawAmount
-    const { requestId } = await vtpassPayElectricity(serviceID, meterNumber, variationCode, rawAmount, phone);
-
-    // Deduct & log totalCharge
-    const result = await recordTransaction(
-      userId, totalCharge, 'ELECTRICITY', requestId, phone, provider,
-      `₦${rawAmount} electricity payment for meter ${meterNumber} (${provider})`
-    );
-
-    res.json({ success: true, balance: result[0].balance, transaction: result[1] });
+    try {
+      // 2. Call VTPass
+      const { requestId } = await vtpassPayElectricity(serviceID, meterNumber, variationCode, rawAmount, phone);
+      
+      // 3. Complete and notify
+      await prisma.transaction.update({ where: { id: tx.id }, data: { reference: requestId } });
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${rawAmount} electricity payment for meter ${meterNumber} (${provider})`);
+      
+      res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: requestId } });
+    } catch (apiError: any) {
+      // Refund if VTPass fails
+      await refundWalletAndFailTx(userId, totalCharge, tx.id);
+      throw new Error(apiError.message || 'Electricity payment failed at provider');
+    }
   } catch (error: any) {
     console.error('payElectricity error:', error.message);
     res.status(500).json({ error: error.message || 'Electricity payment failed' });
@@ -258,71 +293,74 @@ export const payCableTV = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'provider, smartCardNumber, variationCode, amount and phone are required' });
   }
 
+  const rawAmount = parseFloat(amount.toString());
+  if (isNaN(rawAmount) || rawAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
   const serviceID = CABLE_SERVICE_IDS[provider];
   if (!serviceID) return res.status(400).json({ error: `Unknown provider: ${provider}` });
 
   try {
-    // Get dynamic convenience fee
     let fee = 50.0;
     const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
     if (config) fee = config.billConvenienceFee;
 
-    const rawAmount = parseFloat(amount.toString());
     const totalCharge = rawAmount + fee;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    if (user.balance < totalCharge) return res.status(400).json({ error: `Insufficient balance. Total charge is ₦${totalCharge.toFixed(2)}` });
+    // 1. Atomically debit the wallet
+    const tx = await debitWalletAndCreateTx(userId, totalCharge, 'CABLE_TV', `PENDING-${Date.now()}`, phone, provider);
 
-    // Call VTPass with rawAmount
-    const { requestId } = await vtpassPayCableTV(serviceID, smartCardNumber, variationCode, rawAmount, phone);
-
-    // Deduct & log totalCharge
-    const result = await recordTransaction(
-      userId, totalCharge, 'CABLE_TV', requestId, phone, provider,
-      `₦${rawAmount} ${provider} subscription for card ${smartCardNumber}`
-    );
-
-    res.json({ success: true, balance: result[0].balance, transaction: result[1] });
+    try {
+      // 2. Call VTPass
+      const { requestId } = await vtpassPayCableTV(serviceID, smartCardNumber, variationCode, rawAmount, phone);
+      
+      // 3. Complete and notify
+      await prisma.transaction.update({ where: { id: tx.id }, data: { reference: requestId } });
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${rawAmount} ${provider} subscription for card ${smartCardNumber}`);
+      
+      res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: requestId } });
+    } catch (apiError: any) {
+      // Refund if VTPass fails
+      await refundWalletAndFailTx(userId, totalCharge, tx.id);
+      throw new Error(apiError.message || 'Cable TV payment failed at provider');
+    }
   } catch (error: any) {
     console.error('payCableTV error:', error.message);
     res.status(500).json({ error: error.message || 'Cable TV payment failed' });
   }
 };
 
-// ─── POST /api/services/transact (legacy — kept for FUND / CONVERT_AIRTIME) ──
+// ─── POST /api/services/transact (legacy — FUND / CONVERT_AIRTIME credits only) ──
 export const transact = async (req: AuthRequest, res: Response) => {
   const { amount, type } = req.body;
   const userId = req.user!.id;
 
+  const parsedAmount = parseFloat(amount?.toString() || '0');
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
+  // WITHDRAW is explicitly blocked here — use /api/transactions/withdraw instead
+  const allowedTypes = ['CONVERT_AIRTIME', 'FUND'];
+  if (!allowedTypes.includes(type)) {
+    return res.status(400).json({ error: `Transaction type '${type}' is not allowed on this endpoint.` });
+  }
+
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    const isCredit = type === 'CONVERT_AIRTIME' || type === 'FUND';
-    const isDebit  = type === 'WITHDRAW';
-    if (!isCredit && !isDebit) {
-      return res.status(400).json({ error: `Invalid transaction type: ${type}` });
-    }
-
-    // Balance check for all debit operations
-    if ((isDebit || !isCredit) && user.balance < amount)
-      return res.status(400).json({ error: 'Insufficient balance' });
-
     const result = await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
-        data: { balance: isCredit ? { increment: amount } : { decrement: amount } },
+        data: { balance: { increment: parsedAmount } },
       }),
       prisma.transaction.create({
-        data: { userId, amount, type, status: 'COMPLETED', reference: null },
+        data: { userId, amount: parsedAmount, type, status: 'COMPLETED', reference: null },
       }),
       prisma.notification.create({
         data: {
           userId,
-          title: isDebit ? 'Withdrawal Successful' : 'Transaction Successful',
-          message: isDebit
-            ? `₦${amount} withdrawal to your bank account was successful.`
-            : `Your transaction of ₦${amount} for ${type} was successful.`,
+          title: 'Transaction Successful',
+          message: `Your transaction of ₦${parsedAmount} for ${type} was successful.`,
         },
       }),
     ]);

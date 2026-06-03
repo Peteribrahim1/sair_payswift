@@ -9,7 +9,8 @@ export const withdrawFunds = async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
   const { amount, bankAccountId } = req.body;
 
-  if (!amount || amount <= 0) {
+  const rawAmount = parseFloat(amount?.toString() || '0');
+  if (isNaN(rawAmount) || rawAmount <= 0) {
     return res.status(400).json({ error: 'Valid amount is required' });
   }
 
@@ -18,13 +19,6 @@ export const withdrawFunds = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    if (user.balance < amount) {
-      return res.status(400).json({ error: 'Insufficient wallet balance' });
-    }
-
     const bankAccount = await prisma.bankAccount.findFirst({
       where: { id: bankAccountId, userId },
     });
@@ -33,51 +27,76 @@ export const withdrawFunds = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Bank account not found' });
     }
 
-    // Initiate Transfer via Paystack
-    const reference = crypto.randomBytes(16).toString('hex');
-    const transferResult = await initiateTransfer(amount, bankAccount.recipientCode, reference);
+    // 1. Atomically debit wallet
+    const debitResult = await prisma.user.updateMany({
+      where: { id: userId, balance: { gte: rawAmount } },
+      data: { balance: { decrement: rawAmount } },
+    });
 
-    if (transferResult.status !== 'success' && transferResult.status !== 'pending') {
-      throw new Error(`Transfer failed: ${transferResult.status}`);
+    if (debitResult.count === 0) {
+      return res.status(400).json({ error: 'Insufficient wallet balance' });
     }
 
-    // Process atomically
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: userId },
-        data: { balance: { decrement: amount } },
-      }),
-      prisma.transaction.create({
-        data: {
-          userId,
-          type: 'WITHDRAWAL',
-          amount,
-          status: 'COMPLETED',
-          reference: transferResult.reference || reference,
-        },
-      }),
-      prisma.notification.create({
-        data: {
-          userId,
-          title: 'Withdrawal Processed',
-          message: `Your withdrawal of ₦${amount.toFixed(2)} to ${bankAccount.bankName} is being processed.`,
-        },
-      }),
-    ]);
-
-    // Fetch the updated user and transaction to return
-    const updatedUser = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        transactions: { orderBy: { createdAt: 'desc' }, take: 20 },
+    const reference = crypto.randomBytes(16).toString('hex');
+    const tx = await prisma.transaction.create({
+      data: {
+        userId,
+        type: 'WITHDRAWAL',
+        amount: rawAmount,
+        status: 'PENDING',
+        reference,
       },
     });
 
-    return res.json({
-      success: true,
-      balance: updatedUser?.balance,
-      transaction: updatedUser?.transactions[0],
-    });
+    try {
+      // 2. Initiate Transfer via Paystack
+      const transferResult = await initiateTransfer(rawAmount, bankAccount.recipientCode, reference);
+
+      if (transferResult.status !== 'success' && transferResult.status !== 'pending') {
+        throw new Error(`Transfer failed: ${transferResult.status}`);
+      }
+
+      // 3. Complete and notify
+      await prisma.$transaction([
+        prisma.transaction.update({
+          where: { id: tx.id },
+          data: { status: 'COMPLETED', reference: transferResult.reference || reference },
+        }),
+        prisma.notification.create({
+          data: {
+            userId,
+            title: 'Withdrawal Processed',
+            message: `Your withdrawal of ₦${rawAmount.toFixed(2)} to ${bankAccount.bankName} is being processed.`,
+          },
+        }),
+      ]);
+
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          transactions: { orderBy: { createdAt: 'desc' }, take: 20 },
+        },
+      });
+
+      return res.json({
+        success: true,
+        balance: updatedUser?.balance,
+        transaction: updatedUser?.transactions[0],
+      });
+    } catch (apiError: any) {
+      // Refund if Paystack initiation fails
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: { balance: { increment: rawAmount } },
+        }),
+        prisma.transaction.update({
+          where: { id: tx.id },
+          data: { status: 'FAILED' },
+        }),
+      ]);
+      throw new Error(apiError.message || 'Withdrawal failed at provider');
+    }
   } catch (error: any) {
     console.error('Withdrawal error:', error);
     res.status(500).json({ error: error.message || 'Withdrawal failed' });

@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, balance: user.balance } });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error.' });
@@ -38,7 +38,7 @@ export const login = async (req: Request, res: Response) => {
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(400).json({ error: 'Invalid email or password.' });
 
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user.id, email: user.email, balance: user.balance } });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error.' });

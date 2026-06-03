@@ -18,6 +18,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
   bool _isLoading = false;
   bool _loadingPlans = false;
   int _selectedNetworkIndex = 0;
+  int _selectedCategoryIndex = 0;
   Map<String, dynamic>? _selectedPlan;
   final _phoneController = TextEditingController();
 
@@ -27,6 +28,15 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     {'name': 'Glo', 'color': AppColors.gloGreen},
     {'name': '9mobile', 'color': AppColors.nineMobileGreen},
   ];
+
+  final List<String> _categories = ['Daily', 'Weekly', 'Monthly', 'SME', 'Mega'];
+  Map<String, List<Map<String, dynamic>>> _categorizedPlans = {
+    'Daily': [],
+    'Weekly': [],
+    'Monthly': [],
+    'SME': [],
+    'Mega': [],
+  };
 
   List<Map<String, dynamic>> _dataPlans = [];
 
@@ -38,10 +48,37 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
 
   String get _selectedNetworkName => _networks[_selectedNetworkIndex]['name'] as String;
 
+  String _categorizePlan(String name) {
+    final lowerName = name.toLowerCase().replaceAll(' ', ''); // remove spaces for easier matching
+    if (lowerName.contains('sme')) {
+      return 'SME';
+    }
+    if (lowerName.contains('year') ||
+        lowerName.contains('2month') ||
+        lowerName.contains('3month') ||
+        lowerName.contains('6month') ||
+        lowerName.contains('12month') ||
+        lowerName.contains('tb') ||
+        lowerName.contains('mega')) {
+      return 'Mega';
+    }
+    if (lowerName.contains('30day') || lowerName.contains('month')) {
+      return 'Monthly';
+    }
+    if (lowerName.contains('7day') || lowerName.contains('14day') || lowerName.contains('week')) {
+      return 'Weekly';
+    }
+    if (lowerName.contains('day') || lowerName.contains('hr') || lowerName.contains('hour')) {
+      return 'Daily';
+    }
+    return 'Mega';
+  }
+
   Future<void> _loadPlans(String network) async {
     setState(() {
       _loadingPlans = true;
       _dataPlans = [];
+      _categorizedPlans = {'Daily': [], 'Weekly': [], 'Monthly': [], 'SME': [], 'Mega': []};
       _selectedPlan = null;
     });
     try {
@@ -56,7 +93,27 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                 })
             .where((p) => p['amount'] > 0)
             .toList();
-        if (_dataPlans.isNotEmpty) _selectedPlan = _dataPlans.first;
+            
+        // Categorize them
+        for (var plan in _dataPlans) {
+          final cat = _categorizePlan(plan['label'] as String);
+          _categorizedPlans[cat]?.add(plan);
+        }
+        
+        // Sort each category by amount (lowest to highest)
+        for (var key in _categorizedPlans.keys) {
+          _categorizedPlans[key]?.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
+        }
+        
+        // Auto-select first non-empty category and plan
+        _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedPlans[c]!.isNotEmpty);
+        if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
+        
+        final currentCatList = _categorizedPlans[_categories[_selectedCategoryIndex]];
+        if (currentCatList != null && currentCatList.isNotEmpty) {
+          _selectedPlan = currentCatList.first;
+        }
+
         _loadingPlans = false;
       });
     } catch (e) {
@@ -112,73 +169,6 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     AppSnackBar.showSuccess(context, msg);
   }
 
-  void _showPlanPicker() {
-    if (_loadingPlans) return;
-    if (_dataPlans.isEmpty) {
-      _showError('No plans available. Try refreshing.');
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.5,
-          maxChildSize: 0.85,
-          builder: (_, ctrl) => Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('Select Data Plan', style: AppTextStyles.subtitle),
-              const Divider(),
-              Expanded(
-                child: ListView.builder(
-                  controller: ctrl,
-                  itemCount: _dataPlans.length,
-                  itemBuilder: (context, i) {
-                    final plan = _dataPlans[i];
-                    final isSelected = _selectedPlan?['code'] == plan['code'];
-                    return ListTile(
-                      title: Text(plan['label'].toString(),
-                          style: AppTextStyles.body),
-                      trailing: Text(
-                        '₦${(plan['amount'] as double).toStringAsFixed(0)}',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: _networks[_selectedNetworkIndex]['color'] as Color,
-                        ),
-                      ),
-                      leading: isSelected
-                          ? Icon(Icons.check_circle,
-                              color: _networks[_selectedNetworkIndex]['color'] as Color)
-                          : const Icon(Icons.circle_outlined, color: Colors.grey),
-                      onTap: () {
-                        setState(() => _selectedPlan = plan);
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -218,67 +208,141 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 16),
-            // Plan picker
-            Text('Data Plan',
-                style:
-                    AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _showPlanPicker,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    if (_loadingPlans)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      Expanded(
-                        child: Text(
-                          _selectedPlan != null
-                              ? '${_selectedPlan!['label']}  •  ₦${(_selectedPlan!['amount'] as double).toStringAsFixed(0)}'
-                              : 'Select a plan...',
-                          style: _selectedPlan != null
-                              ? AppTextStyles.body
-                              : AppTextStyles.bodySecondary,
-                          overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 16),
+            // Categories Pill Bar
+            Text('Data Bundles', style: AppTextStyles.subtitle),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(_categories.length, (index) {
+                  final cat = _categories[index];
+                  final isSelected = _selectedCategoryIndex == index;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategoryIndex = index;
+                        final plans = _categorizedPlans[cat];
+                        if (plans != null && plans.isNotEmpty) {
+                          _selectedPlan = plans.first;
+                        } else {
+                          _selectedPlan = null;
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? networkColor : Colors.grey.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: isSelected ? null : Border.all(color: Colors.grey.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        cat,
+                        style: AppTextStyles.body.copyWith(
+                          color: isSelected ? Colors.white : Colors.grey.shade700,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                  ],
-                ),
+                    ),
+                  );
+                }),
               ),
             ),
             const SizedBox(height: 16),
-            // Amount display
-            if (_selectedPlan != null) ...[
-              Text('Amount',
-                  style: AppTextStyles.body
-                      .copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+            
+            // Plans Grid
+            if (_loadingPlans)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(30.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_categorizedPlans[_categories[_selectedCategoryIndex]]!.isEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.all(30),
                 decoration: BoxDecoration(
-                  color: networkColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: networkColor.withOpacity(0.3)),
+                  color: Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  '₦ ${(_selectedPlan!['amount'] as double).toStringAsFixed(0)}',
-                  style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.bold, color: networkColor),
+                child: Center(
+                  child: Text('No plans available for this category.',
+                      style: AppTextStyles.bodySecondary),
                 ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.6,
+                ),
+                itemCount: _categorizedPlans[_categories[_selectedCategoryIndex]]!.length,
+                itemBuilder: (context, index) {
+                  final plan = _categorizedPlans[_categories[_selectedCategoryIndex]]![index];
+                  final isSelected = _selectedPlan?['code'] == plan['code'];
+                  
+                  // Extract amount from label cleanly for UI display
+                  String shortLabel = plan['label'].toString();
+                  // Strip the duplicate price string from VTPass names (e.g. "N100 100MB - 24 hrs" -> "100MB - 24 hrs")
+                  if (shortLabel.toUpperCase().startsWith('N') || shortLabel.toUpperCase().startsWith('MTN N')) {
+                    final split = shortLabel.split(' ');
+                    if (split.length > 1 && split[0].contains(RegExp(r'[0-9]'))) {
+                      shortLabel = split.sublist(1).join(' ');
+                    } else if (split.length > 2 && split[1].contains(RegExp(r'[0-9]'))) {
+                      shortLabel = split.sublist(2).join(' ');
+                    }
+                  }
+
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedPlan = plan),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? networkColor.withOpacity(0.1) : Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? networkColor : Colors.grey.withOpacity(0.2),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            shortLabel,
+                            style: AppTextStyles.body.copyWith(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? networkColor : Colors.black87,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Spacer(),
+                          Text(
+                            '₦${(plan['amount'] as double).toStringAsFixed(0)}',
+                            style: AppTextStyles.body.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? networkColor : Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-            ],
             const SizedBox(height: 16),
             // VTPass live indicator
             Container(

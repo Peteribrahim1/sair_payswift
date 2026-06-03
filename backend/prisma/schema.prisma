@@ -17,6 +17,7 @@ model User {
   fullName             String?
   phone                String?
   balance              Float          @default(0.0)
+  isAdmin              Boolean        @default(false)  // Admin flag — set manually in DB
   paystackCustomerCode String?        // Paystack customer ID
   virtualAccountNumber String?        // e.g. "9876543210"
   virtualAccountBank   String?        // e.g. "Titan-Paystack Bank"
