@@ -7,6 +7,8 @@ dotenv.config();
 import * as admin from 'firebase-admin';
 import path from 'path';
 
+export let firebaseInitError: any = null;
+
 // Initialize Firebase Admin
 try {
   let credential;
@@ -21,8 +23,7 @@ try {
     try {
       credential = admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
     } catch (e) {
-      console.error("JSON parse failed for FIREBASE_SERVICE_ACCOUNT env var", e);
-      throw e;
+      throw new Error(`JSON parse failed for FIREBASE_SERVICE_ACCOUNT: ${e}`);
     }
   } else {
     throw new Error("Missing Firebase service account credentials.");
@@ -30,6 +31,7 @@ try {
   admin.initializeApp({ credential });
   console.log('✅ Firebase Admin initialized');
 } catch (error) {
+  firebaseInitError = error;
   console.error('❌ Failed to initialize Firebase Admin:', error);
 }
 import { register, login } from './controllers/auth.controller';
