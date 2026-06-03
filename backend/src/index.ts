@@ -6,6 +6,7 @@ dotenv.config();
 
 import * as admin from 'firebase-admin';
 import path from 'path';
+import fs from 'fs';
 
 export let firebaseInitError: any = null;
 
@@ -53,8 +54,6 @@ import { getNotifications, markNotificationRead } from './controllers/notificati
 import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
 import { authenticate } from './middleware/auth.middleware';
 import { prisma } from './prisma';
-
-import fs from 'fs';
 
 import { createTicket, aiChat } from './controllers/support.controller';
 import {
