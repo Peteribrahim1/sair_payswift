@@ -373,7 +373,7 @@ export const broadcastNotification = async (req: Request, res: Response) => {
         pushResultMsg = ` Also sent push notifications (Success: ${response.successCount}, Failed: ${response.failureCount}).`;
       } catch (fcmErr: any) {
         console.error('FCM Multicast error:', fcmErr.message);
-        pushResultMsg = ' But failed to send push notifications.';
+        pushResultMsg = ` But failed to send push notifications: ${fcmErr.message}`;
       }
     }
 
