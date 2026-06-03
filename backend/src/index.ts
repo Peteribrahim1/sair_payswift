@@ -10,11 +10,20 @@ import path from 'path';
 // Initialize Firebase Admin
 try {
   let credential;
-  const serviceAccountPath = path.resolve(__dirname, '../firebase-service-account.json');
-  if (fs.existsSync(serviceAccountPath)) {
-    credential = admin.credential.cert(require(serviceAccountPath));
+  const localServiceAccountPath = path.resolve(__dirname, '../firebase-service-account.json');
+  const renderSecretFilePath = '/etc/secrets/firebase-service-account.json';
+
+  if (fs.existsSync(localServiceAccountPath)) {
+    credential = admin.credential.cert(require(localServiceAccountPath));
+  } else if (fs.existsSync(renderSecretFilePath)) {
+    credential = admin.credential.cert(require(renderSecretFilePath));
   } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    credential = admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+    try {
+      credential = admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT));
+    } catch (e) {
+      console.error("JSON parse failed for FIREBASE_SERVICE_ACCOUNT env var", e);
+      throw e;
+    }
   } else {
     throw new Error("Missing Firebase service account credentials.");
   }
