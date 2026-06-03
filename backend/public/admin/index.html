@@ -41,6 +41,7 @@
         <button class="nav-tab-btn" data-tab="tab-tickets"><i class="fa-solid fa-headset"></i> Support Tickets <span id="pending-count-badge" class="badge-count" style="display: none;">0</span></button>
         <button class="nav-tab-btn" data-tab="tab-airtime"><i class="fa-solid fa-phone"></i> Airtime Approvals</button>
         <button class="nav-tab-btn" data-tab="tab-kyc"><i class="fa-solid fa-id-card"></i> KYC Approvals</button>
+        <button class="nav-tab-btn" data-tab="tab-broadcasts"><i class="fa-solid fa-bullhorn"></i> Broadcasts</button>
         <button class="nav-tab-btn" data-tab="tab-settings"><i class="fa-solid fa-sliders"></i> Pricing Settings</button>
       </nav>
       <div class="sidebar-footer">
@@ -244,6 +245,25 @@
                 <small style="color: #666;">Flat fee added to Electricity and Cable TV payments.</small>
               </div>
               <button type="submit" class="btn btn-primary" style="width: 100%;">Save Settings</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 7. BROADCASTS -->
+        <div id="tab-broadcasts" class="tab-panel">
+          <div class="settings-container" style="max-width: 600px; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <h2 style="margin-bottom: 24px;">Send Broadcast Announcement</h2>
+            <form id="broadcast-form">
+              <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom: 8px; font-weight: 600;">Title</label>
+                <input type="text" id="broadcast-title" placeholder="e.g., System Maintenance" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;" required>
+              </div>
+              <div style="margin-bottom: 24px;">
+                <label style="display:block; margin-bottom: 8px; font-weight: 600;">Message</label>
+                <textarea id="broadcast-message" rows="4" placeholder="Enter the announcement message here..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;" required></textarea>
+                <small style="color: #666;">This message will be instantly sent to all registered users.</small>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">Send Broadcast</button>
             </form>
           </div>
         </div>

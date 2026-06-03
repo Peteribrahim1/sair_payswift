@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../services/api_service.dart';
-import '../../utils/theme.dart';
-import '../../widgets/custom_button.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/primary_button.dart';
 
 class KycUploadScreen extends StatefulWidget {
   const KycUploadScreen({Key? key}) : super(key: key);
@@ -40,9 +42,7 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
       final res = await ApiService.uploadKycDocument(base64Image);
       if (res['success'] == true) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ID Card uploaded successfully! It is now pending review.')),
-          );
+          AppSnackBar.showSuccess(context, 'ID Card uploaded successfully! It is now pending review.');
           Navigator.pop(context, true); // Return true to signal success
         }
       } else {
@@ -50,9 +50,7 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        AppSnackBar.showError(context, 'Upload failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -66,15 +64,16 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
         title: const Text('Upload ID Card'),
         elevation: 0,
         backgroundColor: Colors.transparent,
+        iconTheme: IconThemeData(color: Theme.of(context).iconTheme.color),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Please upload a clear picture of your National ID, Passport, or Driver\'s License.',
-              style: TextStyle(fontSize: 16, color: Colors.black87),
+              style: TextStyle(fontSize: 16, color: Theme.of(context).textTheme.bodyLarge?.color),
             ),
             const SizedBox(height: 24),
             
@@ -83,14 +82,13 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
               child: Container(
                 height: 200,
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceColor,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3), width: 2, style: BorderStyle.solid),
+                  border: Border.all(color: AppColors.buttonColor.withOpacity(0.3), width: 2, style: BorderStyle.solid),
                 ),
                 child: _imageFile != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(14),
-                        // Note: Using FutureBuilder or dart:io File isn't needed if we just read bytes, but for XFile we can use FutureBuilder to load bytes in memory for Web/Emulator compatibility
                         child: FutureBuilder<List<int>>(
                           future: _imageFile!.readAsBytes(),
                           builder: (context, snapshot) {
@@ -107,9 +105,9 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.upload_file, size: 48, color: AppTheme.primaryColor),
+                          const Icon(Icons.upload_file, size: 48, color: AppColors.buttonColor),
                           const SizedBox(height: 8),
-                          const Text('Tap to select image from gallery', style: TextStyle(color: Colors.black54)),
+                          Text('Tap to select image from gallery', style: TextStyle(color: Theme.of(context).hintColor)),
                         ],
                       ),
               ),
@@ -124,16 +122,16 @@ class _KycUploadScreenState extends State<KycUploadScreen> {
             
             const Spacer(),
             
-            CustomButton(
-              text: 'Submit ID Card',
-              isLoading: _isLoading,
-              onPressed: _imageFile == null ? null : _uploadDocument,
-            ),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : PrimaryButton(
+                    text: 'Submit ID Card',
+                    onPressed: _imageFile == null ? () {} : _uploadDocument,
+                    color: _imageFile == null ? Colors.grey : AppColors.buttonColor,
+                  ),
           ],
         ),
       ),
     );
   }
 }
-
-import 'dart:typed_data';

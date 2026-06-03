@@ -41,7 +41,8 @@ import {
   manuallyFundUser,
   getPendingKyc,
   approveKyc,
-  rejectKyc
+  rejectKyc,
+  broadcastNotification
 } from './controllers/admin.controller';
 
 const app = express();
@@ -168,6 +169,8 @@ app.post('/api/admin/users/:id/fund', manuallyFundUser);
 app.get('/api/admin/kyc', getPendingKyc);
 app.post('/api/admin/kyc/:id/approve', approveKyc);
 app.post('/api/admin/kyc/:id/reject', rejectKyc);
+
+app.post('/api/admin/broadcast', express.json(), broadcastNotification);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

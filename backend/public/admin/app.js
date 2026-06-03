@@ -687,3 +687,41 @@ async function rejectKyc(id) {
     console.error(e);
   }
 }
+
+// ─── BROADCAST LOGIC ──────────────────────────────────────────────────────────
+const broadcastForm = document.getElementById('broadcast-form');
+if (broadcastForm) {
+  broadcastForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('broadcast-title').value;
+    const message = document.getElementById('broadcast-message').value;
+    const btn = broadcastForm.querySelector('button[type="submit"]');
+
+    if (!confirm('Are you sure you want to send this broadcast to EVERY user?')) return;
+
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/broadcast`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ title, message })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(data.message || 'Broadcast sent successfully!');
+        broadcastForm.reset();
+      } else {
+        alert(data.error || 'Failed to send broadcast');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('An error occurred while sending the broadcast.');
+    } finally {
+      btn.textContent = 'Send Broadcast';
+      btn.disabled = false;
+    }
+  });
+}

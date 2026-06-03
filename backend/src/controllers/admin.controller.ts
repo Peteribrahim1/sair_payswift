@@ -334,3 +334,34 @@ export const rejectKyc = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to reject KYC' });
   }
 };
+
+export const broadcastNotification = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { title, message } = req.body;
+  if (!title || !message) {
+    return res.status(400).json({ error: 'Title and message are required' });
+  }
+
+  try {
+    const users = await prisma.user.findMany({ select: { id: true } });
+    if (users.length === 0) {
+      return res.json({ success: true, message: 'No users found to broadcast to.' });
+    }
+
+    const notifications = users.map(u => ({
+      userId: u.id,
+      title,
+      message,
+    }));
+
+    await prisma.notification.createMany({
+      data: notifications,
+    });
+
+    res.json({ success: true, message: `Broadcast sent to ${users.length} users successfully.` });
+  } catch (error: any) {
+    console.error('broadcastNotification error:', error.message);
+    res.status(500).json({ error: 'Failed to send broadcast.' });
+  }
+};
