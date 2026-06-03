@@ -336,6 +336,8 @@ export const rejectKyc = async (req: Request, res: Response) => {
   }
 };
 
+import { firebaseInitError } from '../index';
+
 export const broadcastNotification = async (req: Request, res: Response) => {
   if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
   
@@ -366,6 +368,9 @@ export const broadcastNotification = async (req: Request, res: Response) => {
     let pushResultMsg = '';
     if (tokens.length > 0) {
       try {
+        if (admin.apps.length === 0) {
+          throw new Error(`Firebase not initialized. Init Error: ${firebaseInitError?.message || firebaseInitError || 'Unknown'}`);
+        }
         const response = await admin.messaging().sendEachForMulticast({
           tokens,
           notification: { title, body: message }
