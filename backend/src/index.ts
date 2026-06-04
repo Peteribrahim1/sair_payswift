@@ -56,6 +56,8 @@ import {
   verifyMeter,
   convertAirtime,
   handleAirtimeWebhook,
+  getSmePlans,
+  buySmeData,
 } from './controllers/services.controller';
 import { getNotifications, markNotificationRead } from './controllers/notification.controller';
 import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
@@ -148,12 +150,14 @@ app.post('/api/user/fcm-token', authenticate, saveFcmToken);
 // ─── Service Routes (Real VTPass) ────────────────────────────────────────────
 app.post('/api/services/airtime', authenticate, purchaseLimiter, buyAirtime);
 app.post('/api/services/data', authenticate, purchaseLimiter, buyData);
+app.post('/api/services/sme-data', authenticate, purchaseLimiter, buySmeData);
 app.post('/api/services/electricity', authenticate, purchaseLimiter, payElectricity);
 app.post('/api/services/cable', authenticate, purchaseLimiter, payCableTV);
 app.post('/api/services/convert-airtime', authenticate, purchaseLimiter, convertAirtime);
 
 // Variation / plan fetching (GET)
 app.get('/api/services/data-plans/:network', authenticate, getDataPlans);
+app.get('/api/services/sme-data-plans/:network', authenticate, getSmePlans);
 app.get('/api/services/cable-plans/:provider', authenticate, getCablePlans);
 
 // Smart card / Meter verification

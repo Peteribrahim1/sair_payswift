@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/api_service.dart';
 
 class WalletProvider extends ChangeNotifier {
@@ -91,9 +92,25 @@ class WalletProvider extends ChangeNotifier {
       _fullName = data['fullName'] ?? '';
       _phone = data['phone'] ?? '';
       _profilePicture = data['profilePicture'] ?? '';
+
       _kycStatus = data['kycStatus'] ?? 'UNVERIFIED';
       _kycVerified = data['kycVerified'] ?? false;
       _transactions = data['transactions'] ?? [];
+      
+      try {
+        // Request permissions for iOS and then get the token
+        await FirebaseMessaging.instance.requestPermission();
+        String? fcmToken = await FirebaseMessaging.instance.getToken();
+        debugPrint('FCM Token fetched: $fcmToken');
+        if (fcmToken != null) {
+          await ApiService.saveFcmToken(fcmToken);
+        } else {
+          debugPrint('FCM Token is null');
+        }
+      } catch (fcmErr) {
+        debugPrint('FCM Token error: $fcmErr');
+      }
+
       await fetchBankAccounts();
     } catch (e) {
       debugPrint('Error fetching profile: $e');
@@ -200,6 +217,27 @@ class WalletProvider extends ChangeNotifier {
       phone: phone,
       variationCode: variationCode,
       amount: amount,
+    );
+    if (data['success'] == true) {
+      _balance = (data['balance'] as num).toDouble();
+      if (data['transaction'] != null) _transactions.insert(0, data['transaction']);
+      notifyListeners();
+    }
+    return data;
+  }
+
+  // ─── SME Data ─────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> buySmeData({
+    required String network,
+    required String phone,
+    required int planId,
+    required double rawPrice,
+  }) async {
+    final data = await ApiService.buySmeData(
+      network: network,
+      phone: phone,
+      planId: planId,
+      rawPrice: rawPrice,
     );
     if (data['success'] == true) {
       _balance = (data['balance'] as num).toDouble();

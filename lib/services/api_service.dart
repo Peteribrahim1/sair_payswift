@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   // Local Backend URL (for Android Emulator sandbox testing)
@@ -110,6 +111,35 @@ class ApiService {
         'network': network,
         'phone': phone,
         'amount': amount,
+      }),
+    );
+    return _handleResponse(response);
+  }
+
+  // ─── SME Data (SMEPlug) ───────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> fetchSmeDataPlans(String network) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/services/sme-data-plans/$network'),
+      headers: _headers,
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> buySmeData({
+    required String network,
+    required String phone,
+    required int planId,
+    required double rawPrice,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/services/sme-data'),
+      headers: _headers,
+      body: jsonEncode({
+        'network': network,
+        'phone': phone,
+        'planId': planId,
+        'rawPrice': rawPrice,
       }),
     );
     return _handleResponse(response);
@@ -318,6 +348,19 @@ class ApiService {
       headers: _headers,
     );
     return _handleResponse(response);
+  }
+
+  static Future<void> saveFcmToken(String token) async {
+    if (token.isEmpty) return;
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/user/fcm-token'),
+        headers: _headers,
+        body: jsonEncode({'token': token}),
+      );
+    } catch (e) {
+      debugPrint('Failed to save FCM token: $e');
+    }
   }
 
   static Future<Map<String, dynamic>> submitSupportTicket(String subject, String message) async {

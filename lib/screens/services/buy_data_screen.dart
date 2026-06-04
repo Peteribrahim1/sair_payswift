@@ -82,21 +82,48 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
       _selectedPlan = null;
     });
     try {
-      final plans = await ApiService.getDataPlans(network);
+      // Fetch both VTPass and SMEPlug plans in parallel
+      final results = await Future.wait([
+        ApiService.getDataPlans(network),
+        ApiService.fetchSmeDataPlans(network).catchError((_) => <String, dynamic>{'success': false, 'plans': []}),
+      ]);
+
+      final vtpassPlans = results[0] as List<dynamic>;
+      final smeResponse = results[1] as Map<String, dynamic>;
+      final smePlans = (smeResponse['success'] == true && smeResponse['plans'] != null)
+          ? smeResponse['plans'] as List<dynamic>
+          : [];
+
       if (!mounted) return;
       setState(() {
-        _dataPlans = plans
+        final List<Map<String, dynamic>> allPlans = [];
+
+        // Map VTPass plans
+        allPlans.addAll(vtpassPlans
             .map<Map<String, dynamic>>((p) => {
                   'label': p['name'] ?? p['variation_amount'] ?? '',
                   'amount': double.tryParse(p['variation_amount']?.toString() ?? '0') ?? 0,
                   'code': p['variation_code'] ?? '',
+                  'isSme': false,
                 })
-            .where((p) => p['amount'] > 0)
-            .toList();
+            .where((p) => p['amount'] > 0));
+
+        // Map SMEPlug plans
+        allPlans.addAll(smePlans
+            .map<Map<String, dynamic>>((p) => {
+                  'label': p['name'] ?? '',
+                  'amount': double.tryParse(p['price']?.toString() ?? '0') ?? 0,
+                  'code': p['id']?.toString() ?? '',
+                  'rawPrice': double.tryParse(p['raw_price']?.toString() ?? '0') ?? 0,
+                  'isSme': true,
+                })
+            .where((p) => p['amount'] > 0));
+
+        _dataPlans = allPlans;
             
         // Categorize them
         for (var plan in _dataPlans) {
-          final cat = _categorizePlan(plan['label'] as String);
+          final cat = plan['isSme'] == true ? 'SME' : _categorizePlan(plan['label'] as String);
           _categorizedPlans[cat]?.add(plan);
         }
         
@@ -137,12 +164,22 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await context.read<WalletProvider>().buyData(
-            network: _selectedNetworkName,
-            phone: phone,
-            variationCode: _selectedPlan!['code'] as String,
-            amount: _selectedPlan!['amount'] as double,
-          );
+      Map<String, dynamic> result;
+      if (_selectedPlan!['isSme'] == true) {
+        result = await context.read<WalletProvider>().buySmeData(
+              network: _selectedNetworkName,
+              phone: phone,
+              planId: int.parse(_selectedPlan!['code'] as String),
+              rawPrice: _selectedPlan!['rawPrice'] as double,
+            );
+      } else {
+        result = await context.read<WalletProvider>().buyData(
+              network: _selectedNetworkName,
+              phone: phone,
+              variationCode: _selectedPlan!['code'] as String,
+              amount: _selectedPlan!['amount'] as double,
+            );
+      }
 
       if (!mounted) return;
       setState(() => _isLoading = false);

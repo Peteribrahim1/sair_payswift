@@ -15,6 +15,7 @@ import {
   vtpassVerifySmartCard,
 } from '../services/vtpass.service';
 import { AirtimeCashService } from '../services/airtime-cash.service';
+import { smeplugGetDataPlans, smeplugBuyData, SMEPLUG_NETWORK_IDS } from '../services/smeplug.service';
 
 // ─── Helper: Atomic Debit ──────────────────────────────────────────────────────
 async function debitWalletAndCreateTx(userId: string, amount: number, type: string, reference: string, phone?: string, network?: string) {
@@ -401,5 +402,86 @@ export const handleAirtimeWebhook = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Webhook error:', error.message);
     res.status(500).json({ error: 'Webhook processing failed' });
+  }
+};
+
+// ─── SMEPlug (SME Data Plans) ───────────────────────────────────────────────
+
+export const getSmePlans = async (req: AuthRequest, res: Response) => {
+  const { network } = req.params;
+  
+  const networkId = SMEPLUG_NETWORK_IDS[network];
+  if (!networkId) return res.status(400).json({ error: `Unknown network: ${network}` });
+
+  try {
+    const plans = await smeplugGetDataPlans(networkId);
+    
+    // Add dynamic markup
+    let markup = 5.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) markup = config.dataMarkupPercent;
+
+    const formattedPlans = plans.map(p => {
+      const rawPrice = parseFloat(p.price);
+      return {
+        id: p.id,
+        network,
+        name: p.name,
+        price: rawPrice + (rawPrice * (markup / 100)), // Apply markup
+        raw_price: rawPrice,
+      };
+    });
+
+    res.json({ success: true, plans: formattedPlans });
+  } catch (error: any) {
+    console.error('getSmePlans error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to fetch SME plans' });
+  }
+};
+
+export const buySmeData = async (req: AuthRequest, res: Response) => {
+  const { network, phone, planId, rawPrice } = req.body;
+  const userId = req.user!.id;
+
+  if (!network || !phone || !planId || !rawPrice) {
+    return res.status(400).json({ error: 'network, phone, planId, rawPrice are required' });
+  }
+
+  const networkId = SMEPLUG_NETWORK_IDS[network];
+  if (!networkId) return res.status(400).json({ error: `Unknown network: ${network}` });
+
+  const parsedRawPrice = parseFloat(rawPrice.toString());
+  if (isNaN(parsedRawPrice) || parsedRawPrice <= 0) {
+    return res.status(400).json({ error: 'Invalid raw price' });
+  }
+
+  try {
+    // 1. Get dynamic markup
+    let markup = 5.0;
+    const config = await prisma.appConfig.findUnique({ where: { id: 'global-config' } });
+    if (config) markup = config.dataMarkupPercent;
+
+    const totalCharge = parsedRawPrice + (parsedRawPrice * (markup / 100));
+
+    // 2. Atomically debit the wallet
+    const tx = await debitWalletAndCreateTx(userId, totalCharge, 'DATA_SME', `PENDING-SME-${Date.now()}`, phone, network);
+
+    try {
+      // 3. Call SMEPlug API
+      const { reference } = await smeplugBuyData(networkId, planId, phone, tx.reference!);
+      
+      // 4. Complete and notify
+      await prisma.transaction.update({ where: { id: tx.id }, data: { reference: reference } });
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${parsedRawPrice} SME data sent to ${phone} (${network})`);
+      
+      res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: reference } });
+    } catch (apiError: any) {
+      // Refund if SMEPlug fails
+      await refundWalletAndFailTx(userId, totalCharge, tx.id);
+      throw new Error(apiError.message || 'SME Data purchase failed at provider');
+    }
+  } catch (error: any) {
+    console.error('buySmeData error:', error.message);
+    res.status(500).json({ error: error.message || 'SME Data purchase failed' });
   }
 };
