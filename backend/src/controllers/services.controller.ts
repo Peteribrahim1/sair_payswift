@@ -472,7 +472,7 @@ export const buySmeData = async (req: AuthRequest, res: Response) => {
       
       // 4. Complete and notify
       await prisma.transaction.update({ where: { id: tx.id }, data: { reference: reference } });
-      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${parsedRawPrice} SME data sent to ${phone} (${network})`);
+      const user = await completeTransaction(userId, tx.id, 'Transaction Successful', `₦${totalCharge.toFixed(2)} SME data sent to ${phone} (${network})`);
       
       res.json({ success: true, balance: user?.balance, transaction: { ...tx, status: 'COMPLETED', reference: reference } });
     } catch (apiError: any) {
