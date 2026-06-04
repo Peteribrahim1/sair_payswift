@@ -87,30 +87,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── TEMPORARY PASSWORD RESET ────────────────────────────────────────────────
-app.get('/api/reset-admin-password', async (req, res) => {
-  try {
-    const bcrypt = require('bcrypt');
-    const newPassword = 'password123';
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const admin = await prisma.user.findFirst({ where: { isAdmin: true } });
-    if (admin) {
-      await prisma.user.update({ where: { id: admin.id }, data: { password: hashedPassword } });
-      res.json({ success: true, email: admin.email, newPassword });
-    } else {
-      const user = await prisma.user.findFirst({ where: { email: 'peteribrahim@gmail.com' } });
-      if (user) {
-        await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, isAdmin: true } });
-        res.json({ success: true, email: user.email, newPassword });
-      } else {
-        res.json({ success: false, error: 'No admin found' });
-      }
-    }
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 // Auth endpoints: max 10 requests per 15 minutes per IP
 const authLimiter = rateLimit({
