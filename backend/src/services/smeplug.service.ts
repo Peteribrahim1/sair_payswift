@@ -48,10 +48,10 @@ export async function smeplugBuyData(
   reference: string
 ): Promise<{ reference: string; status: string }> {
   const response = await smeplugClient.post('/data/purchase', {
-    network: networkId,
-    plan: planId,
+    network_id: networkId,
+    plan_id: planId,
     phone,
-    ref: reference,
+    customer_reference: reference,
   });
 
   const data = response.data;
