@@ -326,7 +326,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 2.5,
+                  childAspectRatio: 1.5,
                 ),
                 itemCount: _isSmeSelected ? _smePlans.length : _categorizedPlans[_categories[_selectedCategoryIndex]]!.length,
                 itemBuilder: (context, index) {
