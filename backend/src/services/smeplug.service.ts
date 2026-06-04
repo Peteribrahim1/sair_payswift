@@ -33,8 +33,16 @@ export async function smeplugGetDataPlans(networkId: number): Promise<any[]> {
   }
 
   // Filter out plans with price = 0 (unavailable/out of stock)
-  const plans: any[] = Object.values(data.data).flat() as any[];
-  return plans.filter((p: any) => p.price > 0);
+  const plans: any[] = data.data[networkId.toString()] || [];
+  
+  return plans
+    .filter((p: any) => p.price > 0)
+    .map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      raw_price: p.price,
+    }));
 }
 
 /**
