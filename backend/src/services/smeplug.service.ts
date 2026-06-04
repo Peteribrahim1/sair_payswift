@@ -28,12 +28,12 @@ export async function smeplugGetDataPlans(networkId: number): Promise<any[]> {
   const response = await smeplugClient.get(`/data/plans?network=${networkId}`);
   const data = response.data;
 
-  if (!data.status || !data.plans) {
+  if (!data.status || !data.data) {
     throw new Error('SMEPlug returned no plans');
   }
 
   // Filter out plans with price = 0 (unavailable/out of stock)
-  const plans: any[] = Object.values(data.plans).flat() as any[];
+  const plans: any[] = Object.values(data.data).flat() as any[];
   return plans.filter((p: any) => p.price > 0);
 }
 
