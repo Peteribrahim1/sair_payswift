@@ -29,15 +29,16 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     {'name': '9mobile', 'color': AppColors.nineMobileGreen},
   ];
 
-  final List<String> _categories = ['Daily', 'Weekly', 'Monthly', 'SME', 'Mega'];
+  bool _isSmeSelected = true;
+  final List<String> _categories = ['Daily', 'Weekly', 'Monthly', 'Mega'];
   Map<String, List<Map<String, dynamic>>> _categorizedPlans = {
     'Daily': [],
     'Weekly': [],
     'Monthly': [],
-    'SME': [],
     'Mega': [],
   };
 
+  List<Map<String, dynamic>> _smePlans = [];
   List<Map<String, dynamic>> _dataPlans = [];
 
   @override
@@ -50,9 +51,6 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
 
   String _categorizePlan(String name) {
     final lowerName = name.toLowerCase().replaceAll(' ', ''); // remove spaces for easier matching
-    if (lowerName.contains('sme')) {
-      return 'SME';
-    }
     if (lowerName.contains('year') ||
         lowerName.contains('2month') ||
         lowerName.contains('3month') ||
@@ -78,7 +76,8 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     setState(() {
       _loadingPlans = true;
       _dataPlans = [];
-      _categorizedPlans = {'Daily': [], 'Weekly': [], 'Monthly': [], 'SME': [], 'Mega': []};
+      _smePlans = [];
+      _categorizedPlans = {'Daily': [], 'Weekly': [], 'Monthly': [], 'Mega': []};
       _selectedPlan = null;
     });
     try {
@@ -96,20 +95,19 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
 
       if (!mounted) return;
       setState(() {
-        final List<Map<String, dynamic>> allPlans = [];
-
         // Map VTPass plans
-        allPlans.addAll(vtpassPlans
+        final standardPlans = vtpassPlans
             .map<Map<String, dynamic>>((p) => {
                   'label': p['name'] ?? p['variation_amount'] ?? '',
                   'amount': double.tryParse(p['variation_amount']?.toString() ?? '0') ?? 0,
                   'code': p['variation_code'] ?? '',
                   'isSme': false,
                 })
-            .where((p) => p['amount'] > 0));
+            .where((p) => p['amount'] > 0)
+            .toList();
 
         // Map SMEPlug plans
-        allPlans.addAll(smePlans
+        _smePlans = smePlans
             .map<Map<String, dynamic>>((p) => {
                   'label': p['name'] ?? '',
                   'amount': double.tryParse(p['price']?.toString() ?? '0') ?? 0,
@@ -117,13 +115,12 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   'rawPrice': double.tryParse(p['raw_price']?.toString() ?? '0') ?? 0,
                   'isSme': true,
                 })
-            .where((p) => p['amount'] > 0));
-
-        _dataPlans = allPlans;
+            .where((p) => p['amount'] > 0)
+            .toList();
             
-        // Categorize them
-        for (var plan in _dataPlans) {
-          final cat = plan['isSme'] == true ? 'SME' : _categorizePlan(plan['label'] as String);
+        // Categorize standard plans
+        for (var plan in standardPlans) {
+          final cat = _categorizePlan(plan['label'] as String);
           _categorizedPlans[cat]?.add(plan);
         }
         
@@ -131,14 +128,19 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
         for (var key in _categorizedPlans.keys) {
           _categorizedPlans[key]?.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
         }
+        _smePlans.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
         
-        // Auto-select first non-empty category and plan
-        _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedPlans[c]!.isNotEmpty);
-        if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
-        
-        final currentCatList = _categorizedPlans[_categories[_selectedCategoryIndex]];
-        if (currentCatList != null && currentCatList.isNotEmpty) {
-          _selectedPlan = currentCatList.first;
+        if (_isSmeSelected) {
+          _selectedPlan = _smePlans.isNotEmpty ? _smePlans.first : null;
+        } else {
+          // Auto-select first non-empty category and plan
+          _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedPlans[c]!.isNotEmpty);
+          if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
+          
+          final currentCatList = _categorizedPlans[_categories[_selectedCategoryIndex]];
+          if (currentCatList != null && currentCatList.isNotEmpty) {
+            _selectedPlan = currentCatList.first;
+          }
         }
 
         _loadingPlans = false;
@@ -246,9 +248,13 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
             ),
             const SizedBox(height: 16),
             const SizedBox(height: 16),
+            _buildDataModeToggle(networkColor),
+            const SizedBox(height: 16),
+
             // Categories Pill Bar
-            Text('Data Bundles', style: AppTextStyles.subtitle),
-            const SizedBox(height: 12),
+            if (!_isSmeSelected) ...[
+              Text('Data Bundles', style: AppTextStyles.subtitle),
+              const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -287,7 +293,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   );
                 }),
               ),
-            ),
+            ],
             const SizedBox(height: 16),
             
             // Plans Grid
@@ -298,7 +304,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (_categorizedPlans[_categories[_selectedCategoryIndex]]!.isEmpty)
+            else if (_isSmeSelected ? _smePlans.isEmpty : _categorizedPlans[_categories[_selectedCategoryIndex]]!.isEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(30),
@@ -319,11 +325,13 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 1.6,
+                  childAspectRatio: 2.5,
                 ),
-                itemCount: _categorizedPlans[_categories[_selectedCategoryIndex]]!.length,
+                itemCount: _isSmeSelected ? _smePlans.length : _categorizedPlans[_categories[_selectedCategoryIndex]]!.length,
                 itemBuilder: (context, index) {
-                  final plan = _categorizedPlans[_categories[_selectedCategoryIndex]]![index];
+                  final plan = _isSmeSelected 
+                      ? _smePlans[index] 
+                      : _categorizedPlans[_categories[_selectedCategoryIndex]]![index];
                   final isSelected = _selectedPlan?['code'] == plan['code'];
                   
                   // Extract amount from label cleanly for UI display
@@ -461,6 +469,91 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
             fontSize: 12,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDataModeToggle(Color networkColor) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSmeSelected = true;
+                  _selectedPlan = _smePlans.isNotEmpty ? _smePlans.first : null;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _isSmeSelected ? networkColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: _isSmeSelected
+                      ? [
+                          BoxShadow(
+                              color: networkColor.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4))
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'SME Data',
+                  style: AppTextStyles.body.copyWith(
+                    color: _isSmeSelected ? Colors.white : Colors.grey.shade700,
+                    fontWeight: _isSmeSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSmeSelected = false;
+                  _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedPlans[c]!.isNotEmpty);
+                  if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
+                  final currentCatList = _categorizedPlans[_categories[_selectedCategoryIndex]];
+                  _selectedPlan = currentCatList?.isNotEmpty == true ? currentCatList!.first : null;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: !_isSmeSelected ? networkColor : Colors.transparent,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: !_isSmeSelected
+                      ? [
+                          BoxShadow(
+                              color: networkColor.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4))
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Standard Data',
+                  style: AppTextStyles.body.copyWith(
+                    color: !_isSmeSelected ? Colors.white : Colors.grey.shade700,
+                    fontWeight: !_isSmeSelected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
