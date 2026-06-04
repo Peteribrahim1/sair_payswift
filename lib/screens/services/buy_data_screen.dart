@@ -53,6 +53,20 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     _loadPlans('MTN');
   }
 
+  bool _isSocialPlan(String name) {
+    final lower = name.toLowerCase();
+    return lower.contains('whatsapp') ||
+           lower.contains('facebook') ||
+           lower.contains('tiktok') ||
+           lower.contains('instagram') ||
+           lower.contains('social') ||
+           lower.contains('twitter') ||
+           lower.contains('youtube') ||
+           lower.contains('telegram') ||
+           lower.contains('opera') ||
+           lower.contains('insta');
+  }
+
   String get _selectedNetworkName => _networks[_selectedNetworkIndex]['name'] as String;
 
   String _categorizePlan(String name) {
@@ -110,7 +124,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   'code': p['variation_code'] ?? '',
                   'isSme': false,
                 })
-            .where((p) => p['amount'] > 0)
+            .where((p) => p['amount'] > 0 && !_isSocialPlan(p['label'] as String))
             .toList();
 
         // Map SMEPlug plans
@@ -122,7 +136,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   'rawPrice': double.tryParse(p['raw_price']?.toString() ?? '0') ?? 0,
                   'isSme': true,
                 })
-            .where((p) => p['amount'] > 0)
+            .where((p) => p['amount'] > 0 && !_isSocialPlan(p['label'] as String))
             .toList();
             
         // Categorize standard plans
