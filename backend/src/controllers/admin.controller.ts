@@ -234,12 +234,8 @@ export const updateSystemSettings = async (req: Request, res: Response) => {
 };
 
 export const manuallyFundUser = async (req: Request, res: Response) => {
-  // Simple check for admin secret
-  const adminSecret = req.headers['x-admin-secret'];
-  if (adminSecret !== 'sair-sandbox-test-2026') {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+  
   const { id } = req.params;
   const { amount, action, reason } = req.body;
 
@@ -285,6 +281,8 @@ export const manuallyFundUser = async (req: Request, res: Response) => {
 };
 
 export const getPendingKyc = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   try {
     const users = await prisma.user.findMany({
       where: { kycStatus: 'PENDING' },
@@ -308,6 +306,8 @@ export const getPendingKyc = async (req: Request, res: Response) => {
 };
 
 export const approveKyc = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const { id } = req.params;
   try {
     const user = await prisma.user.update({
@@ -322,6 +322,8 @@ export const approveKyc = async (req: Request, res: Response) => {
 };
 
 export const rejectKyc = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
   const { id } = req.params;
   try {
     const user = await prisma.user.update({

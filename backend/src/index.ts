@@ -227,21 +227,21 @@ app.get('/api/admin/recent-transactions', async (req: any, res: any) => {
 // ─── Real Support Ticket & Admin Portal API Routes ────────────────────────────
 app.post('/api/support/ticket', authenticate, createTicket);
 app.post('/api/support/ai-chat', authenticate, aiChat);
-app.get('/api/admin/users', authenticateAdmin, getAdminUsers);
-app.get('/api/admin/transactions', authenticateAdmin, getAdminTransactions);
-app.get('/api/admin/tickets', authenticateAdmin, getAdminTickets);
-app.put('/api/admin/tickets/:id/resolve', authenticateAdmin, resolveAdminTicket);
-app.get('/api/admin/airtime', authenticateAdmin, getPendingAirtime);
-app.post('/api/admin/airtime/:id/approve', authenticateAdmin, approveAirtime);
-app.post('/api/admin/airtime/:id/reject', authenticateAdmin, rejectAirtime);
-app.get('/api/admin/settings', authenticateAdmin, getSystemSettings);
-app.put('/api/admin/settings', authenticateAdmin, updateSystemSettings);
-app.post('/api/admin/users/:id/fund', authenticateAdmin, manuallyFundUser);
-app.get('/api/admin/kyc', authenticateAdmin, getPendingKyc);
-app.post('/api/admin/kyc/:id/approve', authenticateAdmin, approveKyc);
-app.post('/api/admin/kyc/:id/reject', authenticateAdmin, rejectKyc);
+app.get('/api/admin/users', getAdminUsers);
+app.get('/api/admin/transactions', getAdminTransactions);
+app.get('/api/admin/tickets', getAdminTickets);
+app.put('/api/admin/tickets/:id/resolve', resolveAdminTicket);
+app.get('/api/admin/airtime', getPendingAirtime);
+app.post('/api/admin/airtime/:id/approve', approveAirtime);
+app.post('/api/admin/airtime/:id/reject', rejectAirtime);
+app.get('/api/admin/settings', getSystemSettings);
+app.put('/api/admin/settings', updateSystemSettings);
+app.post('/api/admin/users/:id/fund', manuallyFundUser);
+app.get('/api/admin/kyc', getPendingKyc);
+app.post('/api/admin/kyc/:id/approve', approveKyc);
+app.post('/api/admin/kyc/:id/reject', rejectKyc);
 
-app.post('/api/admin/broadcast', authenticateAdmin, express.json(), broadcastNotification);
+app.post('/api/admin/broadcast', express.json(), broadcastNotification);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
