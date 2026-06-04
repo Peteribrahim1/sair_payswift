@@ -293,8 +293,9 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   );
                 }),
               ),
-            ],
-            const SizedBox(height: 16),
+            ),
+          ],
+          const SizedBox(height: 16),
             
             // Plans Grid
             if (_loadingPlans)
