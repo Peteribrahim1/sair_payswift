@@ -37,6 +37,12 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
     'Monthly': [],
     'Mega': [],
   };
+  Map<String, List<Map<String, dynamic>>> _categorizedSmePlans = {
+    'Daily': [],
+    'Weekly': [],
+    'Monthly': [],
+    'Mega': [],
+  };
 
   List<Map<String, dynamic>> _smePlans = [];
   List<Map<String, dynamic>> _dataPlans = [];
@@ -78,6 +84,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
       _dataPlans = [];
       _smePlans = [];
       _categorizedPlans = {'Daily': [], 'Weekly': [], 'Monthly': [], 'Mega': []};
+      _categorizedSmePlans = {'Daily': [], 'Weekly': [], 'Monthly': [], 'Mega': []};
       _selectedPlan = null;
     });
     try {
@@ -124,23 +131,26 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
           _categorizedPlans[cat]?.add(plan);
         }
         
-        // Sort each category by amount (lowest to highest)
-        for (var key in _categorizedPlans.keys) {
-          _categorizedPlans[key]?.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
+        // Categorize SME plans
+        for (var plan in _smePlans) {
+          final cat = _categorizePlan(plan['label'] as String);
+          _categorizedSmePlans[cat]?.add(plan);
         }
-        _smePlans.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
         
-        if (_isSmeSelected) {
-          _selectedPlan = _smePlans.isNotEmpty ? _smePlans.first : null;
-        } else {
-          // Auto-select first non-empty category and plan
-          _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedPlans[c]!.isNotEmpty);
-          if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
-          
-          final currentCatList = _categorizedPlans[_categories[_selectedCategoryIndex]];
-          if (currentCatList != null && currentCatList.isNotEmpty) {
-            _selectedPlan = currentCatList.first;
-          }
+        // Sort each category by amount (lowest to highest)
+        for (var key in _categories) {
+          _categorizedPlans[key]?.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
+          _categorizedSmePlans[key]?.sort((a, b) => (a['amount'] as double).compareTo(b['amount'] as double));
+        }
+        
+        // Auto-select first non-empty category and plan
+        final targetMap = _isSmeSelected ? _categorizedSmePlans : _categorizedPlans;
+        _selectedCategoryIndex = _categories.indexWhere((c) => targetMap[c]!.isNotEmpty);
+        if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
+        
+        final currentCatList = targetMap[_categories[_selectedCategoryIndex]];
+        if (currentCatList != null && currentCatList.isNotEmpty) {
+          _selectedPlan = currentCatList.first;
         }
 
         _loadingPlans = false;
@@ -252,9 +262,8 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
             const SizedBox(height: 16),
 
             // Categories Pill Bar
-            if (!_isSmeSelected) ...[
-              Text('Data Bundles', style: AppTextStyles.subtitle),
-              const SizedBox(height: 12),
+            Text('Data Bundles', style: AppTextStyles.subtitle),
+            const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -265,7 +274,8 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                     onTap: () {
                       setState(() {
                         _selectedCategoryIndex = index;
-                        final plans = _categorizedPlans[cat];
+                        final targetMap = _isSmeSelected ? _categorizedSmePlans : _categorizedPlans;
+                        final plans = targetMap[cat];
                         if (plans != null && plans.isNotEmpty) {
                           _selectedPlan = plans.first;
                         } else {
@@ -294,8 +304,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                 }),
               ),
             ),
-          ],
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
             
             // Plans Grid
             if (_loadingPlans)
@@ -305,7 +314,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (_isSmeSelected ? _smePlans.isEmpty : _categorizedPlans[_categories[_selectedCategoryIndex]]!.isEmpty)
+            else if ((_isSmeSelected ? _categorizedSmePlans : _categorizedPlans)[_categories[_selectedCategoryIndex]]!.isEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(30),
@@ -328,11 +337,9 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.5,
                 ),
-                itemCount: _isSmeSelected ? _smePlans.length : _categorizedPlans[_categories[_selectedCategoryIndex]]!.length,
+                itemCount: (_isSmeSelected ? _categorizedSmePlans : _categorizedPlans)[_categories[_selectedCategoryIndex]]!.length,
                 itemBuilder: (context, index) {
-                  final plan = _isSmeSelected 
-                      ? _smePlans[index] 
-                      : _categorizedPlans[_categories[_selectedCategoryIndex]]![index];
+                  final plan = (_isSmeSelected ? _categorizedSmePlans : _categorizedPlans)[_categories[_selectedCategoryIndex]]![index];
                   final isSelected = _selectedPlan?['code'] == plan['code'];
                   
                   // Extract amount from label cleanly for UI display
@@ -488,7 +495,10 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
               onTap: () {
                 setState(() {
                   _isSmeSelected = true;
-                  _selectedPlan = _smePlans.isNotEmpty ? _smePlans.first : null;
+                  _selectedCategoryIndex = _categories.indexWhere((c) => _categorizedSmePlans[c]!.isNotEmpty);
+                  if (_selectedCategoryIndex == -1) _selectedCategoryIndex = 0;
+                  final currentCatList = _categorizedSmePlans[_categories[_selectedCategoryIndex]];
+                  _selectedPlan = currentCatList?.isNotEmpty == true ? currentCatList!.first : null;
                 });
               },
               child: AnimatedContainer(
