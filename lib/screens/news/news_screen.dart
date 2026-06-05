@@ -43,55 +43,58 @@ class _NewsScreenState extends State<NewsScreen> {
   final List<BannerAd> _bannerAds = [];
   final List<BannerAd> _loadedBanners = [];
 
-  final List<NewsAffiliateAd> _affiliateAds = const [
-    NewsAffiliateAd(
-      title: 'PaySwift Premium Upgrade',
-      description: 'Unlock zero convenience fees, daily cashbacks, and VIP priority support.',
-      ctaText: 'Upgrade Now',
-      tag: 'SPONSORED',
-      gradient: LinearGradient(
-        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.workspace_premium,
-      themeColor: Color(0xFFFFA500),
-      actionKey: 'upgrade',
-    ),
-    NewsAffiliateAd(
-      title: 'Airtime to Cash - Instantly',
-      description: 'Got excess airtime? Convert it to real cash in your bank account in 2 minutes.',
-      ctaText: 'Convert Now',
-      tag: 'SPONSORED',
-      gradient: LinearGradient(
-        colors: [Color(0xFF3F51B5), Color(0xFF2196F3)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.swap_horizontal_circle_outlined,
-      themeColor: Color(0xFF2196F3),
-      actionKey: 'convert_airtime',
-    ),
-    NewsAffiliateAd(
-      title: 'Refer & Earn ₦500 Cash',
-      description: 'Invite your friends. Get paid immediately once they complete their first transaction.',
-      ctaText: 'Invite Friends',
-      tag: 'PROMO',
-      gradient: LinearGradient(
-        colors: [Color(0xFFE91E63), Color(0xFF9C27B0)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      icon: Icons.people_outline,
-      themeColor: Color(0xFFE91E63),
-      actionKey: 'refer',
-    ),
-  ];
+  List<NewsAffiliateAd> _affiliateAds = [];
+
+  IconData _parseIconName(String iconName) {
+    switch (iconName) {
+      case 'workspace_premium': return Icons.workspace_premium;
+      case 'swap_horizontal_circle_outlined': return Icons.swap_horizontal_circle_outlined;
+      case 'people_outline': return Icons.people_outline;
+      case 'campaign': return Icons.campaign;
+      case 'shopping_bag_outlined': return Icons.shopping_bag_outlined;
+      case 'local_offer_outlined': return Icons.local_offer_outlined;
+      default: return Icons.local_offer;
+    }
+  }
+
+  Color _parseHexColor(String hexColor) {
+    hexColor = hexColor.toUpperCase().replaceAll("#", "");
+    if (hexColor.length == 6) hexColor = "FF$hexColor";
+    return Color(int.tryParse(hexColor, radix: 16) ?? 0xFFFFA500);
+  }
+
+  Future<void> _loadAdverts() async {
+    final rawAdverts = await ApiService.getAdverts();
+    if (mounted) {
+      setState(() {
+        _affiliateAds = rawAdverts.map((ad) {
+          final themeColor = _parseHexColor(ad['themeColor'] ?? '#FFA500');
+          // Create a dynamic gradient using the theme color and a slightly lighter/darker variant
+          final gradient = LinearGradient(
+            colors: [themeColor, themeColor.withOpacity(0.6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+          return NewsAffiliateAd(
+            title: ad['title'] ?? '',
+            description: ad['description'] ?? '',
+            ctaText: ad['ctaText'] ?? 'Learn More',
+            tag: ad['tag'] ?? 'SPONSORED',
+            gradient: gradient,
+            icon: _parseIconName(ad['iconName'] ?? ''),
+            themeColor: themeColor,
+            actionKey: ad['actionKey'] ?? 'none',
+          );
+        }).toList();
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _newsFuture = ApiService.getNews();
+    _loadAdverts();
     _loadAdMobBanners(3);
   }
 
@@ -151,6 +154,7 @@ class _NewsScreenState extends State<NewsScreen> {
     setState(() {
       _newsFuture = ApiService.getNews();
     });
+    await _loadAdverts();
   }
 
   String _relativeTime(String? isoDate) {

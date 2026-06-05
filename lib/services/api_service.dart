@@ -448,4 +448,19 @@ class ApiService {
       {'title': 'NGX All-Share Index Climbs 2.3% on Strong Banking Sector Earnings', 'source': {'name': 'Market'}, 'publishedAt': DateTime.now().subtract(const Duration(hours: 8)).toIso8601String(), 'url': 'https://nairametrics.com'},
     ];
   }
+
+  /// Fetches live adverts from the backend
+  static Future<List<dynamic>> getAdverts() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/adverts'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 15));
+      final data = _handleResponse(response);
+      return data['adverts'] ?? [];
+    } catch (e) {
+      debugPrint('Failed to load adverts: $e');
+      return [];
+    }
+  }
 }

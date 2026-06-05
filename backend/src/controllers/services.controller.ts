@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
 import {
@@ -484,5 +484,19 @@ export const buySmeData = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('buySmeData error:', error.message);
     res.status(500).json({ error: error.message || 'SME Data purchase failed' });
+  }
+};
+
+// ─── Adverts ────────────────────────────────────────────────────────────────
+export const getActiveAdverts = async (req: Request, res: Response) => {
+  try {
+    const adverts = await prisma.advert.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, adverts });
+  } catch (error) {
+    console.error('Get adverts error:', error);
+    res.status(500).json({ error: 'Failed to fetch adverts.' });
   }
 };
