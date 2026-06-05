@@ -560,8 +560,9 @@ tabButtons.forEach(btn => {
     if (tabName === 'tab-transactions') fetchTransactions();
     if (tabName === 'tab-tickets') fetchTickets();
     if (tabName === 'tab-airtime') loadAirtime();
-    if (tabName === 'tab-settings') loadSettings();
     if (tabName === 'tab-kyc') loadKyc();
+    if (tabName === 'tab-settings') loadSettings();
+    if (tabName === 'tab-adverts') loadAdverts();
   });
 });
 // ─── Manual Wallet Funding ───────────────────────────────────────────────────
@@ -724,4 +725,152 @@ if (broadcastForm) {
       btn.disabled = false;
     }
   });
+}
+
+// ─── ADVERTS MANAGEMENT ───────────────────────────────────────────────────────
+
+const advertForm = document.getElementById('advert-form');
+const colorPicker = document.getElementById('adv-color-picker');
+const colorText = document.getElementById('adv-color-text');
+
+if (colorPicker && colorText) {
+  // Sync color picker to text
+  colorPicker.addEventListener('input', (e) => {
+    colorText.value = e.target.value.toUpperCase();
+  });
+  // Sync text to color picker
+  colorText.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+      colorPicker.value = val;
+    }
+  });
+}
+
+if (advertForm) {
+  advertForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = advertForm.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing...';
+    btn.disabled = true;
+
+    const payload = {
+      title: document.getElementById('adv-title').value.trim(),
+      tag: document.getElementById('adv-tag').value.trim(),
+      description: document.getElementById('adv-description').value.trim(),
+      ctaText: document.getElementById('adv-cta').value.trim(),
+      actionKey: document.getElementById('adv-action').value,
+      iconName: document.getElementById('adv-icon').value,
+      themeColor: document.getElementById('adv-color-text').value.trim().toUpperCase(),
+    };
+
+    try {
+      const res = await fetch('/api/admin/adverts', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('Advert published successfully!');
+        advertForm.reset();
+        colorPicker.value = '#FFA500';
+        colorText.value = '#FFA500';
+        loadAdverts();
+      } else {
+        alert('Failed to publish advert: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating advert:', error);
+      alert('Network error while publishing advert.');
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  });
+}
+
+async function loadAdverts() {
+  const container = document.getElementById('adverts-container');
+  if (!container) return;
+
+  container.innerHTML = '<p class="loading-placeholder">Loading active adverts...</p>';
+
+  try {
+    const res = await fetch('/api/admin/adverts', { headers: getHeaders() });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      renderAdverts(data.adverts);
+    } else {
+      container.innerHTML = '<p class="empty-msg" style="color: #e74c3c;">Failed to load adverts.</p>';
+    }
+  } catch (error) {
+    console.error('Error loading adverts:', error);
+    container.innerHTML = '<p class="empty-msg" style="color: #e74c3c;">Connection error.</p>';
+  }
+}
+
+function renderAdverts(adverts) {
+  const container = document.getElementById('adverts-container');
+  container.innerHTML = '';
+
+  if (!adverts || adverts.length === 0) {
+    container.innerHTML = '<p class="empty-msg">No active adverts found. Create one above to show it in the app.</p>';
+    return;
+  }
+
+  adverts.forEach(ad => {
+    const card = document.createElement('div');
+    card.className = 'ticket-card';
+    card.style.borderLeft = `5px solid ${ad.themeColor}`;
+    card.style.position = 'relative';
+
+    // Map icon names to FontAwesome icons just for the admin UI preview
+    let faIcon = 'fa-tag';
+    if (ad.iconName === 'workspace_premium') faIcon = 'fa-star';
+    if (ad.iconName === 'swap_horizontal_circle_outlined') faIcon = 'fa-right-left';
+    if (ad.iconName === 'people_outline') faIcon = 'fa-users';
+    if (ad.iconName === 'campaign') faIcon = 'fa-bullhorn';
+    if (ad.iconName === 'shopping_bag_outlined') faIcon = 'fa-bag-shopping';
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; background: ${ad.themeColor}20; color: ${ad.themeColor}; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+            <i class="fa-solid ${faIcon}"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; color: #333;">${ad.title}</h3>
+            <span style="font-size: 11px; font-weight: 700; color: ${ad.themeColor}; letter-spacing: 0.5px;">${ad.tag}</span>
+          </div>
+        </div>
+        <button onclick="deleteAdvert('${ad.id}')" class="btn" style="background: transparent; color: #e74c3c; padding: 4px 8px; font-size: 14px;" title="Delete Advert">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.4;">${ad.description}</p>
+      <div style="display: flex; gap: 10px; font-size: 12px; color: #888;">
+        <span><strong>CTA:</strong> ${ad.ctaText}</span>
+        <span>&bull;</span>
+        <span><strong>Action:</strong> ${ad.actionKey}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+async function deleteAdvert(id) {
+  if (!confirm('Are you sure you want to permanently delete this advert? It will disappear from all user apps immediately.')) return;
+  try {
+    const res = await fetch(`/api/admin/adverts/${id}`, { method: 'DELETE', headers: getHeaders() });
+    if (res.ok) {
+      loadAdverts(); // refresh list
+    } else {
+      const data = await res.json();
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('Failed to delete advert');
+  }
 }
