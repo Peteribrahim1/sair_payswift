@@ -82,7 +82,6 @@ class _VerifyResetOtpScreenState extends State<VerifyResetOtpScreen> {
                 label: 'OTP Code',
                 hint: '0000',
                 keyboardType: TextInputType.number,
-                maxLength: 4,
                 prefixIcon: Icons.lock_clock_outlined,
               ),
               const SizedBox(height: 32),
