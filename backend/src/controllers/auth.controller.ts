@@ -44,3 +44,77 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User with this email does not exist.' });
+
+    // Generate a 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetOtp: otp, resetOtpExpiresAt: expiresAt },
+    });
+
+    const { sendPasswordResetEmail } = await import('../services/email.service');
+    await sendPasswordResetEmail(user.email, otp);
+
+    res.json({ success: true, message: 'Password reset OTP sent to email.' });
+  } catch (error) {
+    console.error('forgotPassword error:', error);
+    res.status(500).json({ error: 'Failed to send reset email.' });
+  }
+};
+
+export const verifyResetOtp = async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (user.resetOtp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP.' });
+    }
+
+    if (!user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    res.json({ success: true, message: 'OTP verified successfully.' });
+  } catch (error) {
+    console.error('verifyResetOtp error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP.' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (user.resetOtp !== otp || !user.resetOtpExpiresAt || user.resetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetOtp: null,
+        resetOtpExpiresAt: null,
+      },
+    });
+
+    res.json({ success: true, message: 'Password reset successfully. You can now login.' });
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    res.status(500).json({ error: 'Failed to reset password.' });
+  }
+};

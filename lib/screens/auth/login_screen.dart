@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../../providers/wallet_provider.dart';
 import 'package:provider/provider.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -199,7 +200,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
                           child: Text(
                             'Forgot Password?',
                             style: AppTextStyles.body.copyWith(

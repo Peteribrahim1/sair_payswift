@@ -42,7 +42,7 @@ try {
   firebaseInitError = error;
   console.error('❌ Failed to initialize Firebase Admin:', error);
 }
-import { register, login } from './controllers/auth.controller';
+import { register, login, forgotPassword, verifyResetOtp, resetPassword } from './controllers/auth.controller';
 import { getProfile, updateProfile, submitKyc, uploadProfilePicture, uploadKycDocument, saveFcmToken } from './controllers/user.controller';
 import {
   transact,
@@ -138,6 +138,9 @@ app.get('/admin', (req, res) => {
 // ─── Auth Routes ─────────────────────────────────────────────────────────────
 app.post('/api/auth/register', authLimiter, register);
 app.post('/api/auth/login', authLimiter, login);
+app.post('/api/auth/forgot-password', authLimiter, forgotPassword);
+app.post('/api/auth/verify-reset-otp', authLimiter, verifyResetOtp);
+app.post('/api/auth/reset-password', authLimiter, resetPassword);
 
 // ─── User Routes ─────────────────────────────────────────────────────────────
 app.get('/api/user/profile', authenticate, getProfile);

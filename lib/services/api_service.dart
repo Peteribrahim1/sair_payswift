@@ -48,6 +48,33 @@ class ApiService {
     return _handleResponse(response);
   }
 
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/forgot-password'),
+      headers: _headers,
+      body: jsonEncode({'email': email}),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> verifyResetOtp(String email, String otp) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/verify-reset-otp'),
+      headers: _headers,
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/reset-password'),
+      headers: _headers,
+      body: jsonEncode({'email': email, 'otp': otp, 'newPassword': newPassword}),
+    );
+    return _handleResponse(response);
+  }
+
   // ─── User ─────────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getProfile() async {

@@ -14,6 +14,10 @@ import '../services/electricity_screen.dart';
 import '../services/cable_tv_screen.dart';
 import '../services/withdraw_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/snackbar_utils.dart';
 import 'notifications_screen.dart';
 import '../history/analytics_screen.dart';
 import '../support/ai_chat_screen.dart';
@@ -32,6 +36,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<WalletProvider>().fetchProfile();
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (message.notification != null) {
+        AppSnackBar.showInfo(
+          context, 
+          '${message.notification!.title}: ${message.notification!.body}'
+        );
+        _fetchUnreadCount();
+      }
+    });
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -226,7 +244,29 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.buttonColor,
-        child: const Icon(Icons.bolt, color: Colors.white, size: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.bolt, color: Colors.white, size: 22),
+            Text(
+              'AI',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+                height: 1.1,
+                shadows: [
+                  Shadow(
+                    color: Colors.black38,
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         onPressed: () {
           Navigator.push(
             context,

@@ -29,6 +29,8 @@ model User {
   kycStatus            String         @default("UNVERIFIED") // UNVERIFIED | PENDING | VERIFIED | REJECTED
   kycDocument          String?        // URL/path to uploaded ID image
   fcmToken             String?        // Firebase Cloud Messaging device token
+  resetOtp             String?
+  resetOtpExpiresAt    DateTime?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   transactions         Transaction[]
