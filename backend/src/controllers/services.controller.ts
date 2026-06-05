@@ -478,7 +478,8 @@ export const buySmeData = async (req: AuthRequest, res: Response) => {
     } catch (apiError: any) {
       // Refund if SMEPlug fails
       await refundWalletAndFailTx(userId, totalCharge, tx.id);
-      throw new Error(apiError.message || 'SME Data purchase failed at provider');
+      const providerMsg = apiError.response?.data?.msg || apiError.response?.data?.message || apiError.message;
+      throw new Error(`SMEPlug Error: ${providerMsg} (Net: ${networkId}, Plan: ${planId})`);
     }
   } catch (error: any) {
     console.error('buySmeData error:', error.message);
