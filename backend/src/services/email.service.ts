@@ -1,18 +1,11 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.resend.com',
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Initialize the Resend SDK using the API key
+const resend = new Resend(process.env.SMTP_PASS);
 
 export const sendPasswordResetEmail = async (email: string, otp: string) => {
-  // If no credentials are provided yet, we still log to console for debugging
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  // If no API key is provided, log to console
+  if (!process.env.SMTP_PASS) {
     console.log(`\n=========================================`);
     console.log(`📧 MOCK EMAIL SENT TO: ${email}`);
     console.log(`🔑 PASSWORD RESET OTP: ${otp}`);
@@ -21,8 +14,9 @@ export const sendPasswordResetEmail = async (email: string, otp: string) => {
   }
 
   try {
-    await transporter.sendMail({
-      from: '"Sair PaySwift" <noreply@sairpayswift.com>',
+    const { data, error } = await resend.emails.send({
+      // The "from" address must be a verified domain on Resend, or onboarding@resend.dev
+      from: 'Sair PaySwift <onboarding@resend.dev>',
       to: email,
       subject: 'Password Reset Code - Sair PaySwift',
       html: `
@@ -36,9 +30,15 @@ export const sendPasswordResetEmail = async (email: string, otp: string) => {
         </div>
       `,
     });
-    console.log(`✅ Real email sent via SMTP to: ${email}`);
+
+    if (error) {
+      console.error(`❌ Resend API returned an error:`, error);
+      throw new Error(error.message);
+    }
+    
+    console.log(`✅ Real email sent via Resend API to: ${email}`);
   } catch (error) {
-    console.error(`❌ Failed to send SMTP email:`, error);
+    console.error(`❌ Failed to send Resend email:`, error);
     throw error;
   }
 };

@@ -53,7 +53,7 @@ class ApiService {
       Uri.parse('$baseUrl/auth/forgot-password'),
       headers: _headers,
       body: jsonEncode({'email': email}),
-    );
+    ).timeout(const Duration(seconds: 15));
     return _handleResponse(response);
   }
 
@@ -62,7 +62,7 @@ class ApiService {
       Uri.parse('$baseUrl/auth/verify-reset-otp'),
       headers: _headers,
       body: jsonEncode({'email': email, 'otp': otp}),
-    );
+    ).timeout(const Duration(seconds: 15));
     return _handleResponse(response);
   }
 
@@ -71,7 +71,7 @@ class ApiService {
       Uri.parse('$baseUrl/auth/reset-password'),
       headers: _headers,
       body: jsonEncode({'email': email, 'otp': otp, 'newPassword': newPassword}),
-    );
+    ).timeout(const Duration(seconds: 15));
     return _handleResponse(response);
   }
 
