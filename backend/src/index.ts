@@ -58,6 +58,7 @@ import {
   handleAirtimeWebhook,
   getSmePlans,
   buySmeData,
+  getActiveAdverts,
 } from './controllers/services.controller';
 import { getNotifications, markNotificationRead } from './controllers/notification.controller';
 import { getVirtualAccount, handleWebhook } from './controllers/wallet.controller';
@@ -80,7 +81,10 @@ import {
   getPendingKyc,
   approveKyc,
   rejectKyc,
-  broadcastNotification
+  broadcastNotification,
+  getAdminAdverts,
+  createAdvert,
+  deleteAdvert,
 } from './controllers/admin.controller';
 
 const app = express();
@@ -245,6 +249,13 @@ app.post('/api/admin/kyc/:id/approve', approveKyc);
 app.post('/api/admin/kyc/:id/reject', rejectKyc);
 
 app.post('/api/admin/broadcast', express.json(), broadcastNotification);
+
+app.get('/api/admin/adverts', getAdminAdverts);
+app.post('/api/admin/adverts', createAdvert);
+app.delete('/api/admin/adverts/:id', deleteAdvert);
+
+// ─── Public Config/Advert Routes ──────────────────────────────────────────────
+app.get('/api/adverts', getActiveAdverts);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

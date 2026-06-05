@@ -390,3 +390,62 @@ export const broadcastNotification = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to send broadcast.' });
   }
 };
+
+// ─── Advert Management ────────────────────────────────────────────────────────
+
+export const getAdminAdverts = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const adverts = await prisma.advert.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, adverts });
+  } catch (error: any) {
+    console.error('getAdminAdverts error:', error);
+    res.status(500).json({ error: 'Failed to fetch adverts' });
+  }
+};
+
+export const createAdvert = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { title, description, ctaText, tag, themeColor, iconName, actionKey, isActive } = req.body;
+
+  if (!title || !description || !themeColor || !iconName) {
+    return res.status(400).json({ error: 'Missing required advert fields' });
+  }
+
+  try {
+    const advert = await prisma.advert.create({
+      data: {
+        title,
+        description,
+        ctaText: ctaText || 'Learn More',
+        tag: tag || 'SPONSORED',
+        themeColor,
+        iconName,
+        actionKey: actionKey || 'none',
+        isActive: isActive !== undefined ? isActive : true,
+      }
+    });
+    res.json({ success: true, advert });
+  } catch (error: any) {
+    console.error('createAdvert error:', error);
+    res.status(500).json({ error: 'Failed to create advert' });
+  }
+};
+
+export const deleteAdvert = async (req: Request, res: Response) => {
+  if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { id } = req.params;
+
+  try {
+    await prisma.advert.delete({ where: { id } });
+    res.json({ success: true, message: 'Advert deleted successfully' });
+  } catch (error: any) {
+    console.error('deleteAdvert error:', error);
+    res.status(500).json({ error: 'Failed to delete advert' });
+  }
+};
