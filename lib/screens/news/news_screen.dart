@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/snackbar_utils.dart';
@@ -11,23 +13,13 @@ import '../services/convert_airtime_screen.dart';
 
 class NewsAffiliateAd {
   final String title;
-  final String description;
-  final String ctaText;
-  final String tag;
-  final LinearGradient gradient;
-  final IconData icon;
-  final Color themeColor;
-  final String actionKey;
+  final String imageBase64;
+  final String contactLink;
 
   const NewsAffiliateAd({
     required this.title,
-    required this.description,
-    required this.ctaText,
-    required this.tag,
-    required this.gradient,
-    required this.icon,
-    required this.themeColor,
-    required this.actionKey,
+    required this.imageBase64,
+    required this.contactLink,
   });
 }
 
@@ -45,45 +37,19 @@ class _NewsScreenState extends State<NewsScreen> {
 
   List<NewsAffiliateAd> _affiliateAds = [];
 
-  IconData _parseIconName(String iconName) {
-    switch (iconName) {
-      case 'workspace_premium': return Icons.workspace_premium;
-      case 'swap_horizontal_circle_outlined': return Icons.swap_horizontal_circle_outlined;
-      case 'people_outline': return Icons.people_outline;
-      case 'campaign': return Icons.campaign;
-      case 'shopping_bag_outlined': return Icons.shopping_bag_outlined;
-      case 'local_offer_outlined': return Icons.local_offer_outlined;
-      default: return Icons.local_offer;
-    }
-  }
-
-  Color _parseHexColor(String hexColor) {
-    hexColor = hexColor.toUpperCase().replaceAll("#", "");
-    if (hexColor.length == 6) hexColor = "FF$hexColor";
-    return Color(int.tryParse(hexColor, radix: 16) ?? 0xFFFFA500);
-  }
-
   Future<void> _loadAdverts() async {
     final rawAdverts = await ApiService.getAdverts();
     if (mounted) {
       setState(() {
         _affiliateAds = rawAdverts.map((ad) {
-          final themeColor = _parseHexColor(ad['themeColor'] ?? '#FFA500');
-          // Create a dynamic gradient using the theme color and a slightly lighter/darker variant
-          final gradient = LinearGradient(
-            colors: [themeColor, themeColor.withOpacity(0.6)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          );
+          String base64Data = ad['imageBase64'] ?? '';
+          if (base64Data.contains(',')) {
+            base64Data = base64Data.split(',').last;
+          }
           return NewsAffiliateAd(
             title: ad['title'] ?? '',
-            description: ad['description'] ?? '',
-            ctaText: ad['ctaText'] ?? 'Learn More',
-            tag: ad['tag'] ?? 'SPONSORED',
-            gradient: gradient,
-            icon: _parseIconName(ad['iconName'] ?? ''),
-            themeColor: themeColor,
-            actionKey: ad['actionKey'] ?? 'none',
+            imageBase64: base64Data,
+            contactLink: ad['contactLink'] ?? '',
           );
         }).toList();
       });
@@ -495,141 +461,54 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Widget _buildAffiliateAdCard(BuildContext context, NewsAffiliateAd ad) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: ad.themeColor.withOpacity(0.2), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: ad.themeColor.withOpacity(0.1),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Background decorative gradient glow
-          Positioned(
-            right: -30,
-            bottom: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    ad.themeColor.withOpacity(0.3),
-                    ad.themeColor.withOpacity(0.0),
-                  ],
-                ),
+    Uint8List? imageBytes;
+    try {
+      if (ad.imageBase64.isNotEmpty) {
+        imageBytes = base64Decode(ad.imageBase64);
+      }
+    } catch (e) {
+      debugPrint('Failed to decode advert image: $e');
+    }
+
+    return GestureDetector(
+      onTap: () async {
+        if (ad.contactLink.isNotEmpty) {
+          try {
+            await launchUrlString(
+              ad.contactLink,
+              mode: LaunchMode.externalApplication,
+            );
+          } catch (e) {
+            if (context.mounted) {
+              AppSnackBar.showError(context, 'Could not open the link.');
+            }
+          }
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: imageBytes != null
+            ? Image.memory(
+                imageBytes,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                padding: const EdgeInsets.all(24),
+                alignment: Alignment.center,
+                child: const Text('Image unavailable'),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Glow Icon Container
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: ad.gradient,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: ad.themeColor.withOpacity(0.4),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Icon(ad.icon, size: 24, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ad.title,
-                            style: AppTextStyles.subtitle.copyWith(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: ad.themeColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              ad.tag,
-                              style: TextStyle(
-                                color: ad.themeColor,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  ad.description,
-                  style: AppTextStyles.bodySecondary.copyWith(
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: () => _handleAdAction(context, ad.actionKey),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      backgroundColor: ad.themeColor,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      elevation: 4,
-                      shadowColor: ad.themeColor.withOpacity(0.5),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          ad.ctaText,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.open_in_new, size: 14, color: Colors.black),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -103,8 +103,8 @@ model AppConfig {
 model Advert {
   id          String   @id @default(uuid())
   title       String
-  imageBase64 String   @db.Text
-  contactLink String
+  imageBase64 String   @db.Text @default("")
+  contactLink String   @default("")
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -1,0 +1,18 @@
+import { Request, Response } from 'express';
+export declare const getAdminUsers: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getAdminTransactions: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getAdminTickets: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const resolveAdminTicket: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getPendingAirtime: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const approveAirtime: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const rejectAirtime: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getSystemSettings: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const updateSystemSettings: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const manuallyFundUser: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getPendingKyc: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const approveKyc: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const rejectKyc: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const broadcastNotification: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const getAdminAdverts: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createAdvert: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const deleteAdvert: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
