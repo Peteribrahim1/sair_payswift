@@ -730,22 +730,6 @@ if (broadcastForm) {
 // ─── ADVERTS MANAGEMENT ───────────────────────────────────────────────────────
 
 const advertForm = document.getElementById('advert-form');
-const colorPicker = document.getElementById('adv-color-picker');
-const colorText = document.getElementById('adv-color-text');
-
-if (colorPicker && colorText) {
-  // Sync color picker to text
-  colorPicker.addEventListener('input', (e) => {
-    colorText.value = e.target.value.toUpperCase();
-  });
-  // Sync text to color picker
-  colorText.addEventListener('input', (e) => {
-    const val = e.target.value;
-    if (/^#[0-9A-F]{6}$/i.test(val)) {
-      colorPicker.value = val;
-    }
-  });
-}
 
 if (advertForm) {
   advertForm.addEventListener('submit', async (e) => {
@@ -756,14 +740,10 @@ if (advertForm) {
     btn.disabled = true;
 
     const title = document.getElementById('adv-title').value.trim();
-    const tag = document.getElementById('adv-tag').value.trim();
-    const description = document.getElementById('adv-description').value.trim();
-    const ctaText = document.getElementById('adv-cta').value.trim();
-    const actionKey = document.getElementById('adv-action').value;
-    const iconName = document.getElementById('adv-icon').value;
-    const themeColor = document.getElementById('adv-color-text').value.trim().toUpperCase();
+    const contactLink = document.getElementById('adv-link').value.trim();
+    const fileInput = document.getElementById('adv-image');
 
-    if (!title || !tag || !description || !ctaText || !themeColor) {
+    if (!title || !contactLink || !fileInput.files[0]) {
       btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: All fields are required';
       btn.style.backgroundColor = '#e74c3c';
       setTimeout(() => {
@@ -774,11 +754,13 @@ if (advertForm) {
       return;
     }
 
-    const payload = {
-      title, tag, description, ctaText, actionKey, iconName, themeColor
-    };
-
     try {
+      // Compress image to Base64
+      const file = fileInput.files[0];
+      const imageBase64 = await compressImage(file);
+
+      const payload = { title, contactLink, imageBase64 };
+
       const res = await fetch('/api/admin/adverts', {
         method: 'POST',
         headers: getHeaders(),
@@ -795,8 +777,6 @@ if (advertForm) {
         }, 2000);
         
         advertForm.reset();
-        colorPicker.value = '#FFA500';
-        colorText.value = '#FFA500';
         loadAdverts();
       } else {
         btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: ' + (data.error || 'Failed');
@@ -809,7 +789,7 @@ if (advertForm) {
       }
     } catch (error) {
       console.error('Error creating advert:', error);
-      btn.innerHTML = '<i class="fa-solid fa-wifi"></i> Network Error';
+      btn.innerHTML = '<i class="fa-solid fa-wifi"></i> Network/Compression Error';
       btn.style.backgroundColor = '#e74c3c';
       setTimeout(() => {
         btn.innerHTML = originalText;
@@ -817,6 +797,30 @@ if (advertForm) {
         btn.disabled = false;
       }, 3000);
     }
+  });
+}
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = event => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl);
+      };
+      img.onerror = error => reject(error);
+    };
+    reader.onerror = error => reject(error);
   });
 }
 
@@ -852,37 +856,21 @@ function renderAdverts(adverts) {
   adverts.forEach(ad => {
     const card = document.createElement('div');
     card.className = 'ticket-card';
-    card.style.borderLeft = `5px solid ${ad.themeColor}`;
+    card.style.padding = '12px';
     card.style.position = 'relative';
-
-    // Map icon names to FontAwesome icons just for the admin UI preview
-    let faIcon = 'fa-tag';
-    if (ad.iconName === 'workspace_premium') faIcon = 'fa-star';
-    if (ad.iconName === 'swap_horizontal_circle_outlined') faIcon = 'fa-right-left';
-    if (ad.iconName === 'people_outline') faIcon = 'fa-users';
-    if (ad.iconName === 'campaign') faIcon = 'fa-bullhorn';
-    if (ad.iconName === 'shopping_bag_outlined') faIcon = 'fa-bag-shopping';
 
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 40px; height: 40px; border-radius: 8px; background: ${ad.themeColor}20; color: ${ad.themeColor}; display: flex; align-items: center; justify-content: center; font-size: 20px;">
-            <i class="fa-solid ${faIcon}"></i>
-          </div>
-          <div>
-            <h3 style="margin: 0; font-size: 16px; color: #333;">${ad.title}</h3>
-            <span style="font-size: 11px; font-weight: 700; color: ${ad.themeColor}; letter-spacing: 0.5px;">${ad.tag}</span>
-          </div>
-        </div>
+        <h3 style="margin: 0; font-size: 16px; color: #333;">${ad.title || 'Advert'}</h3>
         <button onclick="deleteAdvert('${ad.id}')" class="btn" style="background: transparent; color: #e74c3c; padding: 4px 8px; font-size: 14px;" title="Delete Advert">
           <i class="fa-solid fa-trash"></i>
         </button>
       </div>
-      <p style="font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.4;">${ad.description}</p>
-      <div style="display: flex; gap: 10px; font-size: 12px; color: #888;">
-        <span><strong>CTA:</strong> ${ad.ctaText}</span>
-        <span>&bull;</span>
-        <span><strong>Action:</strong> ${ad.actionKey}</span>
+      <div style="width: 100%; height: 140px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; background: #f0f0f0;">
+        <img src="${ad.imageBase64}" style="width: 100%; height: 100%; object-fit: cover;" alt="Advert Preview" />
+      </div>
+      <div style="font-size: 13px; color: #555;">
+        <strong>Link:</strong> <a href="${ad.contactLink}" target="_blank" style="color: #2980b9; text-decoration: none;">${ad.contactLink}</a>
       </div>
     `;
     container.appendChild(card);

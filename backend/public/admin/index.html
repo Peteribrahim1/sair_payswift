@@ -227,50 +227,18 @@
             <form id="advert-form">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div>
-                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Title</label>
-                  <input type="text" id="adv-title" placeholder="e.g. PaySwift Premium" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Advert Title (Internal Name)</label>
+                  <input type="text" id="adv-title" placeholder="e.g. Summer Promo" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                 </div>
                 <div>
-                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Tag / Badge</label>
-                  <input type="text" id="adv-tag" placeholder="e.g. SPONSORED" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                </div>
-              </div>
-              <div style="margin-bottom: 16px;">
-                <label style="display:block; margin-bottom: 8px; font-weight: 600;">Description</label>
-                <textarea id="adv-description" rows="2" placeholder="Brief description of the offer..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit;"></textarea>
-              </div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                <div>
-                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">CTA Text</label>
-                  <input type="text" id="adv-cta" placeholder="e.g. Upgrade Now" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                </div>
-                <div>
-                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Action Key</label>
-                  <select id="adv-action" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white;">
-                    <option value="upgrade">upgrade (Premium)</option>
-                    <option value="convert_airtime">convert_airtime (AirtimeSwap)</option>
-                    <option value="refer">refer (Referrals)</option>
-                    <option value="none">none (Just Info)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Icon Name</label>
-                  <select id="adv-icon" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white;">
-                    <option value="workspace_premium">workspace_premium (Star)</option>
-                    <option value="swap_horizontal_circle_outlined">swap_horizontal_circle (Swap)</option>
-                    <option value="people_outline">people_outline (Users)</option>
-                    <option value="campaign">campaign (Megaphone)</option>
-                    <option value="shopping_bag_outlined">shopping_bag_outlined (Bag)</option>
-                    <option value="local_offer_outlined">local_offer_outlined (Tag)</option>
-                  </select>
+                  <label style="display:block; margin-bottom: 8px; font-weight: 600;">Contact Link / Website URL</label>
+                  <input type="url" id="adv-link" placeholder="e.g. https://wa.me/..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                 </div>
               </div>
               <div style="margin-bottom: 24px;">
-                <label style="display:block; margin-bottom: 8px; font-weight: 600;">Theme Color (Hex)</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                  <input type="color" id="adv-color-picker" value="#FFA500" style="width: 50px; height: 50px; padding: 0; border: none; border-radius: 8px; cursor: pointer;">
-                  <input type="text" id="adv-color-text" value="#FFA500" style="width: 120px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-                </div>
+                <label style="display:block; margin-bottom: 8px; font-weight: 600;">Upload Advert Image (Flyer / Sticker)</label>
+                <input type="file" id="adv-image" accept="image/png, image/jpeg, image/webp" style="width: 100%; padding: 12px; border: 1px dashed #aaa; border-radius: 8px; background: #fafafa;">
+                <small style="color: #666; display: block; margin-top: 4px;">Recommended size: Square or 16:9 ratio. Image will be automatically compressed before saving.</small>
               </div>
               <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-plus"></i> Publish Advert to App</button>
             </form>
@@ -370,6 +338,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=2.0.2"></script>
+  <script src="app.js?v=3.0.0"></script>
 </body>
 </html>

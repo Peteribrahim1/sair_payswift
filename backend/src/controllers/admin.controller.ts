@@ -410,9 +410,9 @@ export const getAdminAdverts = async (req: Request, res: Response) => {
 export const createAdvert = async (req: Request, res: Response) => {
   if (!verifyAdminPasscode(req)) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { title, description, ctaText, tag, themeColor, iconName, actionKey, isActive } = req.body;
+  const { title, imageBase64, contactLink, isActive } = req.body;
 
-  if (!title || !description || !themeColor || !iconName) {
+  if (!title || !imageBase64 || !contactLink) {
     return res.status(400).json({ error: 'Missing required advert fields' });
   }
 
@@ -420,12 +420,8 @@ export const createAdvert = async (req: Request, res: Response) => {
     const advert = await prisma.advert.create({
       data: {
         title,
-        description,
-        ctaText: ctaText || 'Learn More',
-        tag: tag || 'SPONSORED',
-        themeColor,
-        iconName,
-        actionKey: actionKey || 'none',
+        imageBase64,
+        contactLink,
         isActive: isActive !== undefined ? isActive : true,
       }
     });

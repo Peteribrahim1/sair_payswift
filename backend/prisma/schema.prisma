@@ -103,12 +103,8 @@ model AppConfig {
 model Advert {
   id          String   @id @default(uuid())
   title       String
-  description String
-  ctaText     String
-  tag         String
-  themeColor  String   // e.g. "#FFA500"
-  iconName    String   // e.g. "workspace_premium"
-  actionKey   String   // e.g. "upgrade"
+  imageBase64 String   @db.Text
+  contactLink String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
