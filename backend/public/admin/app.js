@@ -755,14 +755,27 @@ if (advertForm) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing...';
     btn.disabled = true;
 
+    const title = document.getElementById('adv-title').value.trim();
+    const tag = document.getElementById('adv-tag').value.trim();
+    const description = document.getElementById('adv-description').value.trim();
+    const ctaText = document.getElementById('adv-cta').value.trim();
+    const actionKey = document.getElementById('adv-action').value;
+    const iconName = document.getElementById('adv-icon').value;
+    const themeColor = document.getElementById('adv-color-text').value.trim().toUpperCase();
+
+    if (!title || !tag || !description || !ctaText || !themeColor) {
+      btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: All fields are required';
+      btn.style.backgroundColor = '#e74c3c';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.backgroundColor = '';
+        btn.disabled = false;
+      }, 3000);
+      return;
+    }
+
     const payload = {
-      title: document.getElementById('adv-title').value.trim(),
-      tag: document.getElementById('adv-tag').value.trim(),
-      description: document.getElementById('adv-description').value.trim(),
-      ctaText: document.getElementById('adv-cta').value.trim(),
-      actionKey: document.getElementById('adv-action').value,
-      iconName: document.getElementById('adv-icon').value,
-      themeColor: document.getElementById('adv-color-text').value.trim().toUpperCase(),
+      title, tag, description, ctaText, actionKey, iconName, themeColor
     };
 
     try {
