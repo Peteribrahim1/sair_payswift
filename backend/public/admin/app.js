@@ -773,20 +773,36 @@ if (advertForm) {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('Advert published successfully!');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Published Successfully!';
+        btn.style.backgroundColor = '#27ae60';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.style.backgroundColor = '';
+          btn.disabled = false;
+        }, 2000);
+        
         advertForm.reset();
         colorPicker.value = '#FFA500';
         colorText.value = '#FFA500';
         loadAdverts();
       } else {
-        alert('Failed to publish advert: ' + (data.error || 'Unknown error'));
+        btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: ' + (data.error || 'Failed');
+        btn.style.backgroundColor = '#e74c3c';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.style.backgroundColor = '';
+          btn.disabled = false;
+        }, 3000);
       }
     } catch (error) {
       console.error('Error creating advert:', error);
-      alert('Network error while publishing advert.');
-    } finally {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-wifi"></i> Network Error';
+      btn.style.backgroundColor = '#e74c3c';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.backgroundColor = '';
+        btn.disabled = false;
+      }, 3000);
     }
   });
 }
