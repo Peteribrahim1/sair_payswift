@@ -473,14 +473,23 @@ class _NewsScreenState extends State<NewsScreen> {
     return GestureDetector(
       onTap: () async {
         if (ad.contactLink.isNotEmpty) {
+          String link = ad.contactLink.trim();
+          
+          // If it's a raw Nigerian phone number or just numbers, prefix with tel:
+          if (RegExp(r'^[\d\+\-\s\(\)]+$').hasMatch(link)) {
+            link = 'tel:${link.replaceAll(RegExp(r'[^\d\+]'), '')}';
+          } else if (!link.startsWith('http') && !link.startsWith('tel:')) {
+            link = 'https://$link';
+          }
+
           try {
             await launchUrlString(
-              ad.contactLink,
+              link,
               mode: LaunchMode.externalApplication,
             );
           } catch (e) {
             if (context.mounted) {
-              AppSnackBar.showError(context, 'Could not open the link.');
+              AppSnackBar.showError(context, 'Could not open the link/number.');
             }
           }
         }
