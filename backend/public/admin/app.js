@@ -732,6 +732,23 @@ if (broadcastForm) {
 const advertForm = document.getElementById('advert-form');
 
 if (advertForm) {
+  // Setup image preview
+  const fileInput = document.getElementById('adv-image');
+  const previewContainer = document.getElementById('adv-image-preview');
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewContainer.style.display = 'block';
+        previewContainer.querySelector('img').src = e.target.result;
+      }
+      reader.readAsDataURL(e.target.files[0]);
+    } else {
+      previewContainer.style.display = 'none';
+      previewContainer.querySelector('img').src = '';
+    }
+  });
+
   advertForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = advertForm.querySelector('button');
@@ -775,8 +792,9 @@ if (advertForm) {
           btn.style.backgroundColor = '';
           btn.disabled = false;
         }, 2000);
-        
         advertForm.reset();
+        document.getElementById('adv-image-preview').style.display = 'none';
+        document.getElementById('adv-image-preview').querySelector('img').src = '';
         loadAdverts();
       } else {
         btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: ' + (data.error || 'Failed');
