@@ -756,12 +756,13 @@ if (advertForm) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publishing...';
     btn.disabled = true;
 
-    const title = document.getElementById('adv-title').value.trim();
+    const titleEl = document.getElementById('adv-title');
+    const title = (titleEl && titleEl.value.trim()) ? titleEl.value.trim() : 'Sponsored Flyer';
     const contactLink = document.getElementById('adv-link').value.trim();
     const fileInput = document.getElementById('adv-image');
 
-    if (!title || !contactLink || !fileInput.files[0]) {
-      btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: All fields are required';
+    if (!contactLink || !fileInput.files[0]) {
+      btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error: Contact Link and Image are required';
       btn.style.backgroundColor = '#e74c3c';
       setTimeout(() => {
         btn.innerHTML = originalText;
