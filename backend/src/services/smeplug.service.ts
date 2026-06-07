@@ -36,7 +36,7 @@ export async function smeplugGetDataPlans(networkId: number): Promise<any[]> {
   const plans: any[] = data.data[networkId.toString()] || [];
   
   return plans
-    .filter((p: any) => p.price > 0 && p.dispense_method === 'WALLET')
+    .filter((p: any) => p.price > 0 && p.dispense_method === 'WALLET' && p.id != 9)
     .map((p: any) => ({
       id: p.id,
       name: p.name,
