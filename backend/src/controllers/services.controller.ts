@@ -85,7 +85,10 @@ export const getDataPlans = async (req: AuthRequest, res: Response) => {
          p.variation_amount = (rawPrice + (rawPrice * (markup / 100))).toString();
       }
       if (typeof p.name === 'string') {
-        p.name = p.name.replace(/\s*-\s*N[\d,.]+$/i, '');
+        let n = p.name;
+        n = n.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*-\s*/i, ' - ');
+        n = n.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*$/i, '');
+        p.name = n;
       }
       return p;
     });
@@ -426,10 +429,14 @@ export const getSmePlans = async (req: AuthRequest, res: Response) => {
 
     const formattedPlans = plans.map(p => {
       const rawPrice = parseFloat(p.price);
+      let cleanName = p.name;
+      cleanName = cleanName.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*-\s*/i, ' - ');
+      cleanName = cleanName.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*$/i, '');
+
       return {
         id: p.id,
         network,
-        name: p.name.replace(/\s*-\s*N[\d,.]+$/i, ''),
+        name: cleanName,
         price: rawPrice + (rawPrice * (markup / 100)), // Apply markup
         raw_price: rawPrice,
       };
