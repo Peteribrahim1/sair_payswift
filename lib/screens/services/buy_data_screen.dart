@@ -116,7 +116,8 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
 
       if (!mounted) return;
       setState(() {
-        // Map VTPass plans
+        // Map and Deduplicate VTPass plans
+        final Set<String> seenStandardLabels = {};
         final standardPlans = vtpassPlans
             .map<Map<String, dynamic>>((p) => {
                   'label': p['name'] ?? p['variation_amount'] ?? '',
@@ -124,10 +125,17 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   'code': p['variation_code'] ?? '',
                   'isSme': false,
                 })
-            .where((p) => p['amount'] > 0 && !_isSocialPlan(p['label'] as String))
+            .where((p) {
+              if (p['amount'] == 0 || _isSocialPlan(p['label'] as String)) return false;
+              final label = p['label'] as String;
+              if (seenStandardLabels.contains(label)) return false;
+              seenStandardLabels.add(label);
+              return true;
+            })
             .toList();
 
-        // Map SMEPlug plans
+        // Map and Deduplicate SMEPlug plans
+        final Set<String> seenSmeLabels = {};
         _smePlans = smePlans
             .map<Map<String, dynamic>>((p) => {
                   'label': p['name'] ?? '',
@@ -136,7 +144,13 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                   'rawPrice': double.tryParse(p['raw_price']?.toString() ?? '0') ?? 0,
                   'isSme': true,
                 })
-            .where((p) => p['amount'] > 0 && !_isSocialPlan(p['label'] as String))
+            .where((p) {
+              if (p['amount'] == 0 || _isSocialPlan(p['label'] as String)) return false;
+              final label = p['label'] as String;
+              if (seenSmeLabels.contains(label)) return false;
+              seenSmeLabels.add(label);
+              return true;
+            })
             .toList();
             
         // Categorize standard plans

@@ -32,11 +32,11 @@ export async function smeplugGetDataPlans(networkId: number): Promise<any[]> {
     throw new Error('SMEPlug returned no plans');
   }
 
-  // Filter out plans with price = 0 (unavailable/out of stock)
+  // Filter out plans with price = 0 (unavailable) and plans that require a SIM
   const plans: any[] = data.data[networkId.toString()] || [];
   
   return plans
-    .filter((p: any) => p.price > 0)
+    .filter((p: any) => p.price > 0 && p.dispense_method === 'WALLET')
     .map((p: any) => ({
       id: p.id,
       name: p.name,
