@@ -55,16 +55,21 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
 
   bool _isSocialPlan(String name) {
     final lower = name.toLowerCase();
-    return lower.contains('whatsapp') ||
-           lower.contains('facebook') ||
-           lower.contains('tiktok') ||
+    
+    // Use word boundaries \b to safely match abbreviations like yt, ig, tt 
+    // without accidentally matching words like "night" or "giga"
+    final socialRegex = RegExp(r'\b(yt|ig|tt|youtube|instagram|insta|tiktok|facebook|fb|whatsapp|wa|twitter|x|telegram|social|opera)\b');
+    
+    if (socialRegex.hasMatch(lower)) return true;
+    
+    // Fallback for mushed strings like "1gbsocial"
+    return lower.contains('social') || 
+           lower.contains('youtube') || 
+           lower.contains('tiktok') || 
            lower.contains('instagram') ||
-           lower.contains('social') ||
-           lower.contains('twitter') ||
-           lower.contains('youtube') ||
-           lower.contains('telegram') ||
-           lower.contains('opera') ||
-           lower.contains('insta');
+           lower.contains('facebook') ||
+           lower.contains('whatsapp') ||
+           lower.contains('telegram');
   }
 
   String get _selectedNetworkName => _networks[_selectedNetworkIndex]['name'] as String;
@@ -262,6 +267,40 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
             style: AppTextStyles.headlineLight.copyWith(fontSize: 18)),
         centerTitle: true,
       ),
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              )
+            ],
+          ),
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.buttonColor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: _isLoading || _loadingPlans ? null : _handlePurchase,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text('Buy Now', style: AppTextStyles.button),
+            ),
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -448,27 +487,6 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                         color: Colors.green.shade700, fontSize: 12),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.buttonColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: _isLoading || _loadingPlans ? null : _handlePurchase,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
-                    : Text('Buy Now', style: AppTextStyles.button),
               ),
             ),
           ],

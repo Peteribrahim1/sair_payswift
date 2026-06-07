@@ -80,9 +80,12 @@ export const getDataPlans = async (req: AuthRequest, res: Response) => {
     if (config) markup = config.dataMarkupPercent;
 
     const markedUpPlans = plans.map((p: any) => {
-      const rawPrice = parseFloat(p.variation_amount);
+        const rawPrice = parseFloat(p.variation_amount);
       if (!isNaN(rawPrice)) {
          p.variation_amount = (rawPrice + (rawPrice * (markup / 100))).toString();
+      }
+      if (typeof p.name === 'string') {
+        p.name = p.name.replace(/\s*-\s*N[\d,.]+$/i, '');
       }
       return p;
     });
@@ -426,7 +429,7 @@ export const getSmePlans = async (req: AuthRequest, res: Response) => {
       return {
         id: p.id,
         network,
-        name: p.name,
+        name: p.name.replace(/\s*-\s*N[\d,.]+$/i, ''),
         price: rawPrice + (rawPrice * (markup / 100)), // Apply markup
         raw_price: rawPrice,
       };
