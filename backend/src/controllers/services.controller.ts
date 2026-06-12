@@ -17,6 +17,16 @@ import {
 import { AirtimeCashService } from '../services/airtime-cash.service';
 import { smeplugGetDataPlans, smeplugBuyData, SMEPLUG_NETWORK_IDS } from '../services/smeplug.service';
 
+// ─── Helper: Sanitize Provider Errors ──────────────────────────────────────────
+function sanitizeProviderError(errMsg: string | undefined, defaultMsg: string): string {
+  if (!errMsg) return defaultMsg;
+  const lowerMsg = errMsg.toLowerCase();
+  if (lowerMsg.includes('insufficient') || lowerMsg.includes('balance') || lowerMsg.includes('wallet')) {
+    return 'Service provider is currently unavailable. Please try again later.';
+  }
+  return errMsg;
+}
+
 // ─── Helper: Atomic Debit ──────────────────────────────────────────────────────
 async function debitWalletAndCreateTx(userId: string, amount: number, type: string, reference: string, phone?: string, network?: string) {
   if (amount <= 0) throw new Error('Amount must be greater than zero');
@@ -184,7 +194,7 @@ export const buyAirtime = async (req: AuthRequest, res: Response) => {
     } catch (apiError: any) {
       // Refund if VTPass fails
       await refundWalletAndFailTx(userId, totalCharge, tx.id);
-      throw new Error(apiError.message || 'Airtime purchase failed at provider');
+      throw new Error(sanitizeProviderError(apiError.message, 'Airtime purchase failed at provider'));
     }
   } catch (error: any) {
     console.error('buyAirtime error:', error.message);
@@ -234,7 +244,7 @@ export const buyData = async (req: AuthRequest, res: Response) => {
     } catch (apiError: any) {
       // Refund if VTPass fails
       await refundWalletAndFailTx(userId, totalCharge, tx.id);
-      throw new Error(apiError.message || 'Data purchase failed at provider');
+      throw new Error(sanitizeProviderError(apiError.message, 'Data purchase failed at provider'));
     }
   } catch (error: any) {
     console.error('buyData error:', error.message);
@@ -283,7 +293,7 @@ export const payElectricity = async (req: AuthRequest, res: Response) => {
     } catch (apiError: any) {
       // Refund if VTPass fails
       await refundWalletAndFailTx(userId, totalCharge, tx.id);
-      throw new Error(apiError.message || 'Electricity payment failed at provider');
+      throw new Error(sanitizeProviderError(apiError.message, 'Electricity payment failed at provider'));
     }
   } catch (error: any) {
     console.error('payElectricity error:', error.message);
@@ -330,7 +340,7 @@ export const payCableTV = async (req: AuthRequest, res: Response) => {
     } catch (apiError: any) {
       // Refund if VTPass fails
       await refundWalletAndFailTx(userId, totalCharge, tx.id);
-      throw new Error(apiError.message || 'Cable TV payment failed at provider');
+      throw new Error(sanitizeProviderError(apiError.message, 'Cable TV payment failed at provider'));
     }
   } catch (error: any) {
     console.error('payCableTV error:', error.message);
@@ -494,7 +504,7 @@ export const buySmeData = async (req: AuthRequest, res: Response) => {
         providerMsg += ' | Details: ' + JSON.stringify(apiError.response.data.errors);
       }
 
-      throw new Error(`SMEPlug Error: ${providerMsg} (Net: ${networkId}, Plan: ${planId})`);
+      throw new Error(sanitizeProviderError(providerMsg, 'SME Data purchase failed at provider'));
     }
   } catch (error: any) {
     console.error('buySmeData error:', error.message);
