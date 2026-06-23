@@ -67,6 +67,25 @@ class _CableTvScreenState extends State<CableTvScreen> {
                 })
             .where((p) => (p['amount'] as double) > 0)
             .toList();
+
+        // Custom sorting for StarTimes: Monthly Antenna/Dish plans first
+        if (provider.toLowerCase() == 'startimes') {
+          _cablePlans.sort((a, b) {
+            String labelA = a['label'].toString().toLowerCase();
+            String labelB = b['label'].toString().toLowerCase();
+
+            int scoreA = _getStartimesPlanScore(labelA);
+            int scoreB = _getStartimesPlanScore(labelB);
+
+            if (scoreA != scoreB) {
+              return scoreB.compareTo(scoreA); // Higher score comes first
+            }
+            
+            // If scores are equal, sort by price (cheapest first)
+            return (a['amount'] as double).compareTo(b['amount'] as double);
+          });
+        }
+
         if (_cablePlans.isNotEmpty) _selectedCablePlan = _cablePlans.first;
         _loadingPlans = false;
       });
@@ -74,6 +93,31 @@ class _CableTvScreenState extends State<CableTvScreen> {
       if (!mounted) return;
       setState(() => _loadingPlans = false);
     }
+  }
+
+  // ─── Custom StarTimes Sorting Logic ──────────────────────────────────────
+  
+  int _getStartimesPlanScore(String label) {
+    int score = 0;
+    
+    // Period Priority
+    if (label.contains('month')) score += 100;
+    else if (label.contains('weekly')) score += 20;
+    else if (label.contains('daily')) score += 0;
+    else score += 10;
+    
+    // Plan Tier Priority
+    if (label.contains('nova')) score += 50;
+    else if (label.contains('basic')) score += 40;
+    else if (label.contains('smart')) score += 30;
+    else if (label.contains('classic')) score += 20;
+    else if (label.contains('super')) score += 10;
+    
+    // Delivery Type Priority (Antenna strictly before Dish)
+    if (label.contains('antenna')) score += 5;
+    else if (label.contains('dish')) score -= 5;
+    
+    return score;
   }
 
   // ─── Smart card verification ─────────────────────────────────────────────
@@ -113,7 +157,11 @@ class _CableTvScreenState extends State<CableTvScreen> {
     final phone = _phoneController.text.trim();
 
     if (account.isEmpty) {
-      _showError('Please enter your smart card / IUC number');
+      _showError('Please enter your smart card number');
+      return;
+    }
+    if (_verifiedName == null) {
+      _showError('Please verify your smart card number first to ensure it is correct');
       return;
     }
     if (phone.isEmpty || phone.length < 10) {
@@ -309,37 +357,55 @@ class _CableTvScreenState extends State<CableTvScreen> {
               keyboardType: TextInputType.number,
             ),
 
-            // Smart card verification button
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                TextButton.icon(
+            // Smart card verification block
+            const SizedBox(height: 12),
+            if (_verifiedName == null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: _isVerifying ? null : _verifySmartCard,
                   icon: _isVerifying
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.verified_user_outlined, size: 16),
-                  label: Text(_isVerifying ? 'Verifying...' : 'Verify Card',
-                      style: const TextStyle(fontSize: 13)),
-                ),
-                if (_verifiedName != null) ...[
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      '✓ $_verifiedName',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.verified_user_outlined, size: 18),
+                  label: Text(_isVerifying ? 'Verifying Card...' : 'Verify Smart Card'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: AppColors.primaryDark,
+                    side: const BorderSide(color: AppColors.primaryDark, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                ]
-              ],
-            ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Card Verified', style: TextStyle(fontSize: 12, color: Colors.green.shade700)),
+                          const SizedBox(height: 2),
+                          Text(_verifiedName!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 18, color: Colors.grey),
+                      onPressed: () => setState(() => _verifiedName = null),
+                    )
+                  ],
+                ),
+              ),
 
             // Cable plan picker
             if (_selectedProvider != null) ...[

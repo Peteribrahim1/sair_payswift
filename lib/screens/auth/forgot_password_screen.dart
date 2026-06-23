@@ -84,12 +84,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 prefixIcon: Icons.email_outlined,
               ),
               const SizedBox(height: 32),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      text: 'Send Reset Code',
-                      onPressed: _sendResetOtp,
-                    ),
+              PrimaryButton(
+                text: 'Send Reset Code',
+                onPressed: _sendResetOtp,
+                isLoading: _isLoading,
+              ),
             ],
           ),
         ),

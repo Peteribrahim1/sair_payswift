@@ -218,12 +218,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : PrimaryButton(
-                              text: 'Login',
-                              onPressed: _login,
-                            ),
+                      PrimaryButton(
+                        text: 'Login',
+                        onPressed: _login,
+                        isLoading: _isLoading,
+                      ),
                     ],
                   ),
                 ),

@@ -44,6 +44,7 @@ dependencies:
   google_mobile_ads: ^3.0.0
   firebase_core: ^2.27.0
   firebase_messaging: ^14.7.19
+  google_fonts: ^5.1.0
 
 dev_dependencies:
   flutter_test:

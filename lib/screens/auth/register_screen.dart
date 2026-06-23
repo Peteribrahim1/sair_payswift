@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
 
   void _register() async {
@@ -29,8 +30,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _lastNameController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _emailController.text.isEmpty || 
-        _passwordController.text.isEmpty) {
+        _passwordController.text.isEmpty ||
+        _confirmPasswordController.text.isEmpty) {
       AppSnackBar.showError(context, 'Please fill all fields');
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      AppSnackBar.showError(context, 'Passwords do not match');
       return;
     }
 
@@ -80,6 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -201,13 +209,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         isPassword: true,
                         prefixIcon: Icons.lock_outline,
                       ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _confirmPasswordController,
+                        label: 'Confirm Password',
+                        hint: 'Re-enter your Password',
+                        isPassword: true,
+                        prefixIcon: Icons.lock_outline,
+                      ),
                       const SizedBox(height: 32),
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : PrimaryButton(
-                              text: 'Sign Up',
-                              onPressed: _register,
-                            ),
+                      PrimaryButton(
+                        text: 'Sign Up',
+                        onPressed: _register,
+                        isLoading: _isLoading,
+                      ),
                     ],
                   ),
                 ),

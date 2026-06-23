@@ -362,7 +362,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                       child: Text(
                         cat,
                         style: AppTextStyles.body.copyWith(
-                          color: isSelected ? Colors.white : Colors.grey.shade700,
+                          color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade700),
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                         ),
                       ),
@@ -443,7 +443,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                             style: AppTextStyles.body.copyWith(
                               fontSize: 12,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? networkColor : Colors.black87,
+                              color: isSelected ? networkColor : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -454,7 +454,7 @@ class _BuyDataScreenState extends State<BuyDataScreen> {
                             style: AppTextStyles.body.copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: isSelected ? networkColor : Colors.black,
+                              color: isSelected ? networkColor : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black),
                             ),
                           ),
                         ],

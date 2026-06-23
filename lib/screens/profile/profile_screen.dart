@@ -191,9 +191,9 @@ class ProfileScreen extends StatelessWidget {
                       _buildListTile(
                           context, 'Transaction History', Icons.history),
                       const Divider(height: 1),
-                      _buildListTile(
-                          context, 'Bank Accounts', Icons.account_balance),
-                      const Divider(height: 1),
+                      // _buildListTile(
+                      //    context, 'Bank Accounts', Icons.account_balance),
+                      // const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.verified_user, color: AppColors.buttonColor),
                         title: Text('KYC Verification', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
@@ -225,7 +225,8 @@ class ProfileScreen extends StatelessWidget {
                         onChanged: (value) {
                           themeProvider.toggleTheme(value);
                         },
-                        activeColor: AppColors.primaryDark,
+                        activeColor: themeProvider.isDarkMode ? Colors.tealAccent : AppColors.primaryDark,
+                        activeTrackColor: themeProvider.isDarkMode ? Colors.teal.withOpacity(0.5) : null,
                       ),
                     ],
                   ),
@@ -278,12 +279,12 @@ class ProfileScreen extends StatelessWidget {
             MaterialPageRoute(
                 builder: (context) => const TransactionHistoryScreen()),
           );
-        } else if (title == 'Bank Accounts') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const BankAccountsScreen()),
-          );
+        // } else if (title == 'Bank Accounts') {
+        //   Navigator.push(
+        //     context,
+        //     MaterialPageRoute(
+        //         builder: (context) => const BankAccountsScreen()),
+        //   );
         } else if (title == 'Help & Support') {
           Navigator.push(
             context,

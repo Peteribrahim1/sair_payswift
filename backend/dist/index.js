@@ -91,7 +91,7 @@ const support_controller_1 = require("./controllers/support.controller");
 const admin_controller_1 = require("./controllers/admin.controller");
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '10mb' }));
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 // Auth endpoints: max 10 requests per 15 minutes per IP
 const authLimiter = (0, express_rate_limit_1.default)({

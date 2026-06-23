@@ -85,12 +85,11 @@ class _VerifyResetOtpScreenState extends State<VerifyResetOtpScreen> {
                 prefixIcon: Icons.lock_clock_outlined,
               ),
               const SizedBox(height: 32),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      text: 'Verify Code',
-                      onPressed: _verifyOtp,
-                    ),
+              PrimaryButton(
+                text: 'Verify Code',
+                onPressed: _verifyOtp,
+                isLoading: _isLoading,
+              ),
             ],
           ),
         ),

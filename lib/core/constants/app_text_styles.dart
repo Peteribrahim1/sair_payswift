@@ -1,48 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTextStyles {
-  static TextStyle headlineDark = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle headlineDark = GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: AppColors.primaryDark,
   );
 
-  static TextStyle headline1 = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle headline1 = GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.bold,
   );
 
-  static TextStyle headlineLight = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle headlineLight = GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: AppColors.textLight,
   );
 
-  static TextStyle subtitle = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle subtitle = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
   );
 
-  static TextStyle body = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle body = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.normal,
   );
 
-  static TextStyle bodySecondary = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle bodySecondary = GoogleFonts.inter(
     fontSize: 14,
     fontWeight: FontWeight.normal,
     color: Colors.grey,
   );
 
-  static TextStyle button = const TextStyle(
-    fontFamily: 'Inter',
+  static TextStyle button = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textLight,

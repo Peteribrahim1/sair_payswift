@@ -91,6 +91,10 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
       _showError('Please enter your meter number');
       return;
     }
+    if (_verifiedName == null) {
+      _showError('Please verify your meter number first to ensure it is correct');
+      return;
+    }
     if (phone.isEmpty || phone.length < 10) {
       _showError('Please enter a valid phone number');
       return;
@@ -228,37 +232,55 @@ class _ElectricityScreenState extends State<ElectricityScreen> {
               },
             ),
 
-            // Meter verification button
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                TextButton.icon(
+            // Meter verification block
+            const SizedBox(height: 12),
+            if (_verifiedName == null)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: _isVerifying ? null : _verifyMeter,
                   icon: _isVerifying
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.verified_user_outlined, size: 16),
-                  label: Text(_isVerifying ? 'Verifying...' : 'Verify Meter',
-                      style: const TextStyle(fontSize: 13)),
-                ),
-                if (_verifiedName != null) ...[
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      '✓ $_verifiedName',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.verified_user_outlined, size: 18),
+                  label: Text(_isVerifying ? 'Verifying Meter...' : 'Verify Meter Number'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: AppColors.primaryDark,
+                    side: const BorderSide(color: AppColors.primaryDark, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                ]
-              ],
-            ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Meter Verified', style: TextStyle(fontSize: 12, color: Colors.green.shade700)),
+                          const SizedBox(height: 2),
+                          Text(_verifiedName!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 18, color: Colors.grey),
+                      onPressed: () => setState(() => _verifiedName = null),
+                    )
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
 
             // Meter type toggle

@@ -377,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
       {'title': 'Buy Airtime', 'icon': Icons.phone_android, 'color': AppColors.mtnYellow, 'route': const BuyAirtimeScreen()},
       {'title': 'Convert Airtime', 'icon': Icons.import_export, 'color': AppColors.airtelRed, 'route': const ConvertAirtimeScreen()},
       {'title': 'Electricity', 'icon': Icons.lightbulb_outline, 'color': Colors.orange, 'route': const ElectricityScreen()},
-      {'title': 'Withdraw', 'icon': Icons.account_balance_wallet, 'color': Colors.teal, 'route': const WithdrawScreen()},
+      // {'title': 'Withdraw', 'icon': Icons.account_balance_wallet, 'color': Colors.teal, 'route': const WithdrawScreen()},
       {'title': 'Cable TV', 'icon': Icons.tv, 'color': AppColors.nineMobileGreen, 'route': const CableTvScreen()},
       {'title': 'Analytics', 'icon': Icons.insights, 'color': Colors.deepPurple, 'route': const AnalyticsScreen()},
     ];

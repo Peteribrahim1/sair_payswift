@@ -7,6 +7,7 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isFullWidth;
   final Color? color;
+  final bool isLoading;
 
   const PrimaryButton({
     Key? key,
@@ -14,6 +15,7 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.isFullWidth = true,
     this.color,
+    this.isLoading = false,
   }) : super(key: key);
 
   @override
@@ -29,11 +31,20 @@ class PrimaryButton extends StatelessWidget {
           ),
           elevation: 0,
         ),
-        onPressed: onPressed,
-        child: Text(
-          text,
-          style: AppTextStyles.button,
-        ),
+        onPressed: isLoading ? () {} : onPressed,
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Text(
+                text,
+                style: AppTextStyles.button,
+              ),
       ),
     );
   }

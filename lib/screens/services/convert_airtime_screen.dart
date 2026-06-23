@@ -47,40 +47,40 @@ class _ConvertAirtimeScreenState extends State<ConvertAirtimeScreen> {
   }
 
   void _handleConversion() async {
-    final phone = _phoneController.text.trim();
-    final amount = double.tryParse(_amountController.text.trim());
-
-    if (phone.isEmpty || phone.length < 10) {
-      _showError('Please enter a valid phone number');
-      return;
-    }
-    if (amount == null || amount < 100) {
-      _showError('Minimum conversion amount is ₦100');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final networkName = _networks[_selectedNetwork]['name'].toString().toLowerCase();
-      
-      final result = await ApiService.convertAirtime(networkName, phone, amount);
-      
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (result['success'] == true) {
-        // Refresh transactions to show the pending transaction
-        context.read<WalletProvider>().fetchProfile();
-        _showInstructionsDialog(result['instructions'], _payout);
-      } else {
-        _showError(result['error'] ?? 'Conversion failed');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _showError(e.toString().replaceFirst('Exception: ', ''));
-    }
+    // Show a friendly coming soon message instead of executing the conversion
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.build_circle_outlined, color: AppColors.primaryDark, size: 64),
+            const SizedBox(height: 16),
+            Text('Coming Soon!', style: AppTextStyles.subtitle),
+            const SizedBox(height: 12),
+            Text(
+              'We are currently upgrading the Airtime to Cash feature to serve you better. Please check back later!',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySecondary.copyWith(fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Okay', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {

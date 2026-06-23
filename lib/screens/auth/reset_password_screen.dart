@@ -97,12 +97,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 prefixIcon: Icons.lock_outline,
               ),
               const SizedBox(height: 32),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : PrimaryButton(
-                      text: 'Reset Password',
-                      onPressed: _resetPassword,
-                    ),
+              PrimaryButton(
+                text: 'Reset Password',
+                onPressed: _resetPassword,
+                isLoading: _isLoading,
+              ),
             ],
           ),
         ),

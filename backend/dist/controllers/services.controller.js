@@ -5,6 +5,16 @@ const prisma_1 = require("../prisma");
 const vtpass_service_1 = require("../services/vtpass.service");
 const airtime_cash_service_1 = require("../services/airtime-cash.service");
 const smeplug_service_1 = require("../services/smeplug.service");
+// ─── Helper: Sanitize Provider Errors ──────────────────────────────────────────
+function sanitizeProviderError(errMsg, defaultMsg) {
+    if (!errMsg)
+        return defaultMsg;
+    const lowerMsg = errMsg.toLowerCase();
+    if (lowerMsg.includes('insufficient') || lowerMsg.includes('balance') || lowerMsg.includes('wallet')) {
+        return 'Service provider is currently unavailable. Please try again later.';
+    }
+    return errMsg;
+}
 // ─── Helper: Atomic Debit ──────────────────────────────────────────────────────
 async function debitWalletAndCreateTx(userId, amount, type, reference, phone, network) {
     if (amount <= 0)
@@ -64,6 +74,12 @@ const getDataPlans = async (req, res) => {
             const rawPrice = parseFloat(p.variation_amount);
             if (!isNaN(rawPrice)) {
                 p.variation_amount = (rawPrice + (rawPrice * (markup / 100))).toString();
+            }
+            if (typeof p.name === 'string') {
+                let n = p.name;
+                n = n.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*-\s*/i, ' - ');
+                n = n.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*$/i, '');
+                p.name = n;
             }
             return p;
         });
@@ -156,7 +172,7 @@ const buyAirtime = async (req, res) => {
         catch (apiError) {
             // Refund if VTPass fails
             await refundWalletAndFailTx(userId, totalCharge, tx.id);
-            throw new Error(apiError.message || 'Airtime purchase failed at provider');
+            throw new Error(sanitizeProviderError(apiError.message, 'Airtime purchase failed at provider'));
         }
     }
     catch (error) {
@@ -202,7 +218,7 @@ const buyData = async (req, res) => {
         catch (apiError) {
             // Refund if VTPass fails
             await refundWalletAndFailTx(userId, totalCharge, tx.id);
-            throw new Error(apiError.message || 'Data purchase failed at provider');
+            throw new Error(sanitizeProviderError(apiError.message, 'Data purchase failed at provider'));
         }
     }
     catch (error) {
@@ -245,7 +261,7 @@ const payElectricity = async (req, res) => {
         catch (apiError) {
             // Refund if VTPass fails
             await refundWalletAndFailTx(userId, totalCharge, tx.id);
-            throw new Error(apiError.message || 'Electricity payment failed at provider');
+            throw new Error(sanitizeProviderError(apiError.message, 'Electricity payment failed at provider'));
         }
     }
     catch (error) {
@@ -287,7 +303,7 @@ const payCableTV = async (req, res) => {
         catch (apiError) {
             // Refund if VTPass fails
             await refundWalletAndFailTx(userId, totalCharge, tx.id);
-            throw new Error(apiError.message || 'Cable TV payment failed at provider');
+            throw new Error(sanitizeProviderError(apiError.message, 'Cable TV payment failed at provider'));
         }
     }
     catch (error) {
@@ -382,10 +398,13 @@ const getSmePlans = async (req, res) => {
             markup = config.dataMarkupPercent;
         const formattedPlans = plans.map(p => {
             const rawPrice = parseFloat(p.price);
+            let cleanName = p.name;
+            cleanName = cleanName.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*-\s*/i, ' - ');
+            cleanName = cleanName.replace(/\s*-\s*(?:N|₦)?[\d,.]+(?:\s*Naira)?\s*$/i, '');
             return {
                 id: p.id,
                 network,
-                name: p.name,
+                name: cleanName,
                 price: rawPrice + (rawPrice * (markup / 100)), // Apply markup
                 raw_price: rawPrice,
             };
@@ -431,8 +450,11 @@ const buySmeData = async (req, res) => {
         catch (apiError) {
             // Refund if SMEPlug fails
             await refundWalletAndFailTx(userId, totalCharge, tx.id);
-            const providerMsg = apiError.response?.data?.msg || apiError.response?.data?.message || apiError.message;
-            throw new Error(`SMEPlug Error: ${providerMsg} (Net: ${networkId}, Plan: ${planId})`);
+            let providerMsg = apiError.response?.data?.msg || apiError.response?.data?.message || apiError.message;
+            if (apiError.response?.data?.errors) {
+                providerMsg += ' | Details: ' + JSON.stringify(apiError.response.data.errors);
+            }
+            throw new Error(sanitizeProviderError(providerMsg, 'SME Data purchase failed at provider'));
         }
     }
     catch (error) {

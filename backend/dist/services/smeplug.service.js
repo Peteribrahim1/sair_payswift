@@ -34,10 +34,10 @@ async function smeplugGetDataPlans(networkId) {
     if (!data.status || !data.data) {
         throw new Error('SMEPlug returned no plans');
     }
-    // Filter out plans with price = 0 (unavailable/out of stock)
+    // Filter out plans with price = 0 (unavailable) and plans that require a SIM
     const plans = data.data[networkId.toString()] || [];
     return plans
-        .filter((p) => p.price > 0)
+        .filter((p) => p.price > 0 && p.dispense_method === 'WALLET' && p.id != 9)
         .map((p) => ({
         id: p.id,
         name: p.name,
@@ -51,10 +51,14 @@ async function smeplugGetDataPlans(networkId) {
  */
 async function smeplugBuyData(networkId, planId, phone, reference) {
     const response = await smeplugClient.post('/data/purchase', {
-        network_id: networkId,
-        plan_id: planId,
-        phone,
+        network_id: String(networkId),
+        network: String(networkId),
+        plan_id: String(planId),
+        plan: String(planId),
+        phone: phone,
+        phone_number: phone,
         customer_reference: reference,
+        ref: reference,
     });
     const data = response.data;
     if (!data.status) {
